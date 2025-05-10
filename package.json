@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "test:focus": "jest --testPathPattern=workflow-engine-error",
+    "test:focus": "jest --testPathPattern=workflow-store",
     "build": "tsc",
     "watch": "tsc -w"
   },

@@ -1,19 +1,24 @@
-/*import { WorkflowEngine } from './workflow-engine';
+import { WorkflowEngine } from './workflow-engine';
 import { Workflow } from './types/workflow';
 import { WorkflowContext } from './types/workflow-context';
 import { Task } from './types/task';
 import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
+import { TaskExecutor } from './executors/task-executor';
 
 describe('WorkflowEngine - Task Execution', () => {
     let workflowEngine: WorkflowEngine;
     let mockLogger: any;
+    let taskExecutor: TaskExecutor;
 
     beforeEach(() => {
         mockLogger = {
             debug: jest.fn(),
-            error: jest.fn()
+            error: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn()
         };
-        workflowEngine = new WorkflowEngine(mockLogger);
+        taskExecutor = new TaskExecutor();
+        workflowEngine = new WorkflowEngine(undefined, taskExecutor, mockLogger);
     });
 
     it('should execute a single task successfully', async () => {
@@ -39,9 +44,10 @@ describe('WorkflowEngine - Task Execution', () => {
             data: { test: 'data' }
         };
 
-        jest.spyOn(workflowEngine as any, 'executeTask').mockImplementationOnce(() => ({
+        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve({
+            task,
+            taskId: task.id,
             success: true,
-            taskId: '1',
             output: {
                 statusCode: 200,
                 headers: {},
@@ -92,19 +98,21 @@ describe('WorkflowEngine - Task Execution', () => {
             data: { test: 'data' }
         };
 
-        jest.spyOn(workflowEngine as any, 'executeTask')
-            .mockImplementationOnce(() => ({
+        jest.spyOn(taskExecutor, 'executeTask')
+            .mockImplementationOnce(() => Promise.resolve({
+                task: tasks[0],
+                taskId: tasks[0].id,
                 success: true,
-                taskId: '1',
                 output: {
                     statusCode: 200,
                     headers: {},
                     data: { result: 'success1' }
                 }
             }))
-            .mockImplementationOnce(() => ({
+            .mockImplementationOnce(() => Promise.resolve({
+                task: tasks[1],
+                taskId: tasks[1].id,
                 success: true,
-                taskId: '2',
                 output: {
                     statusCode: 200,
                     headers: {},
@@ -145,16 +153,19 @@ describe('WorkflowEngine - Task Execution', () => {
             data: { test: 'data' }
         };
 
-        jest.spyOn(workflowEngine as any, 'executeTask').mockImplementationOnce(() => {
-            throw new Error('Task execution failed');
-        });
+        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve({
+            task,
+            taskId: task.id,
+            success: false,
+            error: 'Task execution failed'
+        }));
 
         const result = await workflowEngine.executeWorkflow(workflow, context);
 
         expect(result.success).toBe(false);
         expect(result.taskResults).toHaveLength(1);
         expect(result.taskResults[0].success).toBe(false);
-        expect(result.taskResults[0].error).toBeDefined();
+        expect(result.taskResults[0].error).toBe('Task execution failed');
     });
 
     it('should validate task configuration before execution', async () => {
@@ -179,12 +190,19 @@ describe('WorkflowEngine - Task Execution', () => {
             data: { test: 'data' }
         };
 
+        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve({
+            task,
+            taskId: task.id,
+            success: false,
+            error: 'URL is required for API task'
+        }));
+
         const result = await workflowEngine.executeWorkflow(workflow, context);
 
         expect(result.success).toBe(false);
         expect(result.taskResults).toHaveLength(1);
         expect(result.taskResults[0].success).toBe(false);
-        expect(result.taskResults[0].error).toContain('URL is required');
+        expect(result.taskResults[0].error).toBe('URL is required for API task');
     });
 
     it('should update workflow context with task results', async () => {
@@ -211,8 +229,9 @@ describe('WorkflowEngine - Task Execution', () => {
         };
 
         const taskResult = {
+            task,
+            taskId: task.id,
             success: true,
-            taskId: '1',
             output: {
                 statusCode: 200,
                 headers: {},
@@ -220,7 +239,7 @@ describe('WorkflowEngine - Task Execution', () => {
             }
         };
 
-        jest.spyOn(workflowEngine as any, 'executeTask').mockImplementationOnce(() => taskResult);
+        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve(taskResult));
 
         const result = await workflowEngine.executeWorkflow(workflow, context);
 
@@ -266,16 +285,19 @@ describe('WorkflowEngine - Task Execution', () => {
             data: { test: 'data' }
         };
 
-        jest.spyOn(workflowEngine as any, 'executeTask')
-            .mockImplementationOnce(() => {
-                throw new Error('Critical task failure');
-            });
+        jest.spyOn(taskExecutor, 'executeTask')
+            .mockImplementationOnce(() => Promise.resolve({
+                task: tasks[0],
+                taskId: tasks[0].id,
+                success: false,
+                error: 'Critical task failure'
+            }));
 
         const result = await workflowEngine.executeWorkflow(workflow, context);
 
         expect(result.success).toBe(false);
         expect(result.taskResults).toHaveLength(1);
         expect(result.taskResults[0].success).toBe(false);
-        expect(result.taskResults[0].error).toBeDefined();
+        expect(result.taskResults[0].error).toBe('Critical task failure');
     });
-}); */
+});
