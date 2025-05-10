@@ -3,55 +3,110 @@ import { ITaskExecutor } from '../interfaces/task-executor.interface';
 import { TaskType } from '../enums/task.enum';
 import { ApiCallTaskConfig } from '../types/task';
 import { TaskError } from '../errors/workflow-error';
+import { TaskFactory } from '../../tasks/factory/task.factory';
+import { ILogger } from '../interfaces/logger.interface';
 
 export class TaskExecutor implements ITaskExecutor {
+    private taskFactory: TaskFactory;
+
+    constructor(private readonly logger: ILogger) {
+        this.taskFactory = new TaskFactory(logger);
+    }
+
     async executeTask(task: Task, context: WorkflowContext): Promise<TaskResult> {
         try {
-            if (task.type === TaskType.API_CALL) {
-                const config = task.config as ApiCallTaskConfig;
+            this.logger.debug('Starting task execution', {
+                taskId: task.id,
+                type: task.type
+            });
 
-                // Validate required fields
-                if (!config.url) {
-                    throw new TaskError('URL is required for API task', task.id);
+            // Execute task using factory
+            const result = await this.taskFactory.executeTask(task);
+
+            // Add context data to result metadata
+            return {
+                task,
+                ...result,
+                metadata: {
+                    ...result.metadata,
+                    contextData: context.data
                 }
-
-                if (!config.method) {
-                    throw new TaskError('Method is required for API task', task.id);
-                }
-
-                // In a real implementation, this would make an actual API call
-                // For now, we'll simulate a successful response
-                const response = {
-                    statusCode: 200,
-                    headers: {},
-                    data: { result: 'success' }
-                };
-
-                return {
-                    task,
-                    taskId: task.id,
-                    success: true,
-                    output: response
-                };
-            }
-
-            throw new TaskError(`Unsupported task type: ${task.type}`, task.id);
+            };
         } catch (error) {
+            // Handle TaskError (includes validation errors)
             if (error instanceof TaskError) {
+                this.logger.error('Task execution failed', {
+                    taskId: task.id,
+                    type: task.type,
+                    error: error.message
+                });
+
                 return {
                     task,
                     taskId: task.id,
                     success: false,
-                    error: error.message
+                    error: error.message,
+                    metadata: {
+                        contextData: context.data
+                    }
                 };
             }
+
+            // Handle unknown errors
+            const errorMessage = error instanceof Error ? error.message : 'Unknown task error';
+            this.logger.error('Task execution failed', {
+                taskId: task.id,
+                type: task.type,
+                error: errorMessage
+            });
 
             return {
                 task,
                 taskId: task.id,
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown task error'
+                error: errorMessage,
+                metadata: {
+                    contextData: context.data
+                }
             };
         }
+    }
+
+    async executeTasks(tasks: Task[], context: WorkflowContext): Promise<TaskResult[]> {
+        const results: TaskResult[] = [];
+        let shouldContinue = true;
+
+        for (const task of tasks) {
+            if (!shouldContinue) {
+                break;
+            }
+
+            try {
+                const result = await this.executeTask(task, context);
+                results.push(result);
+
+                // Check if we should continue based on task configuration
+                if (!result.success && task.onError === 'stop') {
+                    shouldContinue = false;
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown task error';
+                results.push({
+                    task,
+                    taskId: task.id,
+                    success: false,
+                    error: errorMessage,
+                    metadata: {
+                        contextData: context.data
+                    }
+                });
+
+                if (task.onError === 'stop') {
+                    shouldContinue = false;
+                }
+            }
+        }
+
+        return results;
     }
 } 

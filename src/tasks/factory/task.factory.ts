@@ -4,17 +4,23 @@ import { BaseTask, TaskResult } from '../base/task.interface';
 import { ApiTask } from '../api/api-task.interface';
 import { TaskError } from '../../core/errors/workflow-error';
 import { ApiTaskExecutor } from '../api/api-task.executor';
+import { TaskValidationService } from '../../core/services/task-validation.service';
 
 export class TaskFactory {
     private executors: Map<TaskType, any>;
+    private validationService: TaskValidationService;
 
     constructor(private readonly logger: ILogger) {
         this.executors = new Map([
             [TaskType.API_CALL, new ApiTaskExecutor(logger)]
         ]);
+        this.validationService = new TaskValidationService();
     }
 
     async executeTask(task: BaseTask): Promise<TaskResult> {
+        // Validate task before execution
+        this.validationService.validateTask(task);
+
         const executor = this.executors.get(task.type);
 
         if (!executor) {
