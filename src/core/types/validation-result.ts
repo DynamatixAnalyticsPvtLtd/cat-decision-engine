@@ -1,7 +1,12 @@
 import { ValidationRule } from './validation-rule';
 
-export interface ValidationResult {
+export interface ValidationResultItem {
     rule: ValidationRule;
     success: boolean;
-    error?: string;
+    message?: string;
+}
+
+export interface ValidationResult {
+    success: boolean;
+    validationResults: ValidationResultItem[];
 } 

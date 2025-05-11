@@ -1,9 +1,9 @@
 import { ValidationType, ValidationOperator, ValidationOnFail } from '../enums/validation.enum';
 
 export interface ValidationRule {
+    id: string;
     name: string;
     condition: string;
-    onFail: ValidationOnFail;
-    fallback?: ValidationRule;
-    message?: string;
+    message: string;
+    onFail?: 'stop' | 'continue';
 } 

@@ -1,19 +1,19 @@
 import { ILogger } from '../interfaces/logger.interface';
 
 export class DefaultLogger implements ILogger {
-    debug(message: string, ...args: any[]): void {
-        console.debug(`[DEBUG] ${message}`, ...args);
+    debug(message: string, meta?: Record<string, any>): void {
+        console.debug(`[DEBUG] ${message}`, meta || '');
     }
 
-    info(message: string, ...args: any[]): void {
-        console.info(`[INFO] ${message}`, ...args);
+    info(message: string, meta?: Record<string, any>): void {
+        console.info(`[INFO] ${message}`, meta || '');
     }
 
-    warn(message: string, ...args: any[]): void {
-        console.warn(`[WARN] ${message}`, ...args);
+    warn(message: string, meta?: Record<string, any>): void {
+        console.warn(`[WARN] ${message}`, meta || '');
     }
 
-    error(message: string, ...args: any[]): void {
-        console.error(`[ERROR] ${message}`, ...args);
+    error(message: string, meta?: Record<string, any>): void {
+        console.error(`[ERROR] ${message}`, meta || '');
     }
 } 

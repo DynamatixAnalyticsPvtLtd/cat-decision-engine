@@ -5,23 +5,31 @@ import { ApiTask } from '../api/api-task.interface';
 import { TaskError } from '../../core/errors/workflow-error';
 import { ApiTaskExecutor } from '../api/api-task.executor';
 import { TaskValidationService } from '../../core/services/task-validation.service';
+import { ITaskExecutor } from '../interfaces/task-executor.interface';
 
 export class TaskFactory {
-    private executors: Map<TaskType, any>;
+    private executors: Map<TaskType, ITaskExecutor>;
     private validationService: TaskValidationService;
 
     constructor(private readonly logger: ILogger) {
-        this.executors = new Map([
-            [TaskType.API_CALL, new ApiTaskExecutor(logger)]
-        ]);
         this.validationService = new TaskValidationService();
+        this.executors = new Map();
+        this.initializeExecutors();
     }
 
-    async executeTask(task: BaseTask): Promise<TaskResult> {
+    private initializeExecutors(): void {
+        this.executors.set(TaskType.API_CALL, new ApiTaskExecutor(this.logger));
+    }
+
+    getTaskExecutor(type: TaskType): ITaskExecutor | undefined {
+        return this.executors.get(type);
+    }
+
+    async executeTask(task: BaseTask, context: any): Promise<TaskResult> {
         // Validate task before execution
         this.validationService.validateTask(task);
 
-        const executor = this.executors.get(task.type);
+        const executor = this.getTaskExecutor(task.type);
 
         if (!executor) {
             const error = `No executor found for task type: ${task.type}`;
@@ -38,7 +46,7 @@ export class TaskFactory {
             // Type assertion based on task type
             switch (task.type) {
                 case TaskType.API_CALL:
-                    return await executor.execute(task as ApiTask);
+                    return await executor.execute(task as ApiTask, context);
                 default:
                     throw new TaskError(`Unsupported task type: ${task.type}`, task.id);
             }

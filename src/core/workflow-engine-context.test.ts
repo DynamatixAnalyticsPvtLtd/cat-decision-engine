@@ -1,51 +1,99 @@
 import { WorkflowEngine } from './workflow-engine';
-import { Workflow, Task, WorkflowContext } from './types';
-import { TaskType, TaskMethod } from './enums/task.enum';
+import { Workflow, Task } from './types';
+import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
+import { TaskExecutor } from './executors/task-executor';
+import { DefaultLogger } from './logging/default-logger';
 
 describe('WorkflowEngine Context', () => {
     let workflowEngine: WorkflowEngine;
+    let taskExecutor: TaskExecutor;
+    let logger: DefaultLogger;
 
     beforeEach(() => {
+        logger = new DefaultLogger();
+        taskExecutor = new TaskExecutor(logger);
         workflowEngine = new WorkflowEngine();
     });
 
-    describe('executeWorkflow', () => {
-        it('should throw error when context is not provided', async () => {
+    describe('execute', () => {
+        it('should maintain context between tasks', async () => {
+            const task1: Task = {
+                id: 'task-1',
+                type: TaskType.API_CALL,
+                name: 'First Task',
+                order: 1,
+                config: {
+                    url: 'https://api.test.com/1',
+                    method: TaskMethod.GET
+                }
+            };
+
+            const task2: Task = {
+                id: 'task-2',
+                type: TaskType.API_CALL,
+                name: 'Second Task',
+                order: 2,
+                config: {
+                    url: 'https://api.test.com/2',
+                    method: TaskMethod.POST,
+                    body: { data: 'test' }
+                }
+            };
+
             const workflow: Workflow = {
-                id: 'test-workflow-1',
+                id: 'test-workflow',
                 name: 'Test Workflow',
                 trigger: 'test',
                 validations: [],
-                tasks: []
+                tasks: [task1, task2]
             };
-            const context = null as unknown as WorkflowContext;
 
-            await expect(workflowEngine.executeWorkflow(workflow, context))
-                .rejects
-                .toThrow('Context is required');
-        });
+            const data = { test: 'value' };
 
-        it('should execute empty workflow successfully', async () => {
-            const workflow: Workflow = {
-                id: 'test-workflow-2',
-                name: 'Test Workflow',
-                trigger: 'test',
-                validations: [],
-                tasks: []
-            };
-            const context: WorkflowContext = { data: { test: 'value' } };
+            // Mock task executor
+            jest.spyOn(taskExecutor, 'executeTask')
+                .mockImplementationOnce(async () => ({
+                    task: task1,
+                    taskId: task1.id,
+                    success: true,
+                    result: { status: 'success' }
+                }))
+                .mockImplementationOnce(async () => ({
+                    task: task2,
+                    taskId: task2.id,
+                    success: true,
+                    result: { status: 'success' }
+                }));
 
-            const result = await workflowEngine.executeWorkflow(workflow, context);
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
                 success: true,
-                context,
+                context: { data },
                 validationResults: [],
-                taskResults: []
+                taskResults: [
+                    {
+                        task: task1,
+                        taskId: task1.id,
+                        success: true,
+                        result: { status: 'success' }
+                    },
+                    {
+                        task: task2,
+                        taskId: task2.id,
+                        success: true,
+                        result: { status: 'success' }
+                    }
+                ]
             });
+
+            // Verify task execution order and context
+            expect(taskExecutor.executeTask).toHaveBeenCalledTimes(2);
+            expect(taskExecutor.executeTask).toHaveBeenNthCalledWith(1, task1, expect.any(Object));
+            expect(taskExecutor.executeTask).toHaveBeenNthCalledWith(2, task2, expect.any(Object));
         });
 
-        it('should update context with task output', async () => {
+        it('should handle context updates from tasks', async () => {
             const task: Task = {
                 id: 'task-1',
                 type: TaskType.API_CALL,
@@ -59,52 +107,56 @@ describe('WorkflowEngine Context', () => {
             };
 
             const workflow: Workflow = {
-                id: 'test-workflow-3',
+                id: 'test-workflow',
                 name: 'Test Workflow',
                 trigger: 'test',
                 validations: [],
                 tasks: [task]
             };
 
-            const context: WorkflowContext = { data: { test: 'value' } };
+            const data = { test: 'value' };
 
-            // Mock task to return output
-            jest.spyOn(workflowEngine, 'executeTask').mockImplementationOnce(async () => ({
+            // Mock task executor
+            jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(async () => ({
                 task,
                 taskId: task.id,
                 success: true,
-                output: {
-                    statusCode: 200,
-                    headers: {},
-                    data: { result: 'success' }
-                }
+                result: { status: 'success', data: { updated: true } }
             }));
 
-            const result = await workflowEngine.executeWorkflow(workflow, context);
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
                 success: true,
-                context: {
-                    data: {
-                        test: 'value',
-                        'tasktask-1': {
-                            statusCode: 200,
-                            headers: {},
-                            data: { result: 'success' }
-                        }
-                    }
-                },
+                context: { data },
                 validationResults: [],
                 taskResults: [{
                     task,
                     taskId: task.id,
                     success: true,
-                    output: {
-                        statusCode: 200,
-                        headers: {},
-                        data: { result: 'success' }
-                    }
+                    result: { status: 'success', data: { updated: true } }
                 }]
+            });
+        });
+
+        it('should handle empty context', async () => {
+            const workflow: Workflow = {
+                id: 'test-workflow',
+                name: 'Test Workflow',
+                trigger: 'test',
+                validations: [],
+                tasks: []
+            };
+
+            const data = {};
+
+            const result = await workflowEngine.execute(workflow, data);
+
+            expect(result).toEqual({
+                success: true,
+                context: { data },
+                validationResults: [],
+                taskResults: []
             });
         });
     });

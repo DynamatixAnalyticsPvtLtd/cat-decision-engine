@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "test:focus": "jest --testPathPattern=workflow-store",
+    "test:focus": "jest --testPathPattern=workflow-engine.decorator",
     "build": "tsc",
     "watch": "tsc -w"
   },

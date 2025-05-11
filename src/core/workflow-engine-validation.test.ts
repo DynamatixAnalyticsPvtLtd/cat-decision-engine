@@ -1,16 +1,22 @@
 import { WorkflowEngine } from './workflow-engine';
-import { Workflow, ValidationRule, WorkflowContext } from './types';
+import { Workflow, ValidationRule } from './types';
 import { ValidationType, ValidationOperator, ValidationOnFail } from './enums/validation.enum';
+import { TaskExecutor } from './executors/task-executor';
+import { DefaultLogger } from './logging/default-logger';
 
-describe.only('WorkflowEngine Validation', () => {
+describe('WorkflowEngine Validation', () => {
     let workflowEngine: WorkflowEngine;
+    let taskExecutor: TaskExecutor;
+    let logger: DefaultLogger;
 
     beforeEach(() => {
+        logger = new DefaultLogger();
+        taskExecutor = new TaskExecutor(logger);
         workflowEngine = new WorkflowEngine();
     });
 
-    describe('executeWorkflow', () => {
-        it('should execute workflow with single validation successfully', async () => {
+    describe('execute', () => {
+        it('should execute single validation successfully', async () => {
             const validationRule: ValidationRule = {
                 name: 'age-validation',
                 condition: 'age >= 18',
@@ -18,20 +24,20 @@ describe.only('WorkflowEngine Validation', () => {
             };
 
             const workflow: Workflow = {
-                id: 'test-workflow-1',
+                id: 'test-workflow',
                 name: 'Test Workflow',
                 trigger: 'test',
                 validations: [validationRule],
                 tasks: []
             };
 
-            const context: WorkflowContext = { age: 20 };
+            const data = { age: 20 };
 
-            const result = await workflowEngine.executeWorkflow(workflow, context);
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
                 success: true,
-                context,
+                context: { data },
                 validationResults: [{
                     rule: validationRule,
                     success: true
@@ -40,44 +46,42 @@ describe.only('WorkflowEngine Validation', () => {
             });
         });
 
-        it('should execute workflow with multiple validations in sequence', async () => {
-            const validationRule1: ValidationRule = {
-                name: 'age-validation',
-                condition: 'age >= 18',
-                onFail: ValidationOnFail.STOP
-            };
-
-            const validationRule2: ValidationRule = {
-                name: 'score-validation',
-                condition: 'score >= 60',
-                onFail: ValidationOnFail.STOP
-            };
+        it('should execute multiple validations in order', async () => {
+            const validationRules: ValidationRule[] = [
+                {
+                    name: 'age-validation',
+                    condition: 'age >= 18',
+                    onFail: ValidationOnFail.STOP
+                },
+                {
+                    name: 'name-validation',
+                    condition: 'name.length > 0',
+                    onFail: ValidationOnFail.STOP
+                }
+            ];
 
             const workflow: Workflow = {
-                id: 'test-workflow-2',
+                id: 'test-workflow',
                 name: 'Test Workflow',
                 trigger: 'test',
-                validations: [validationRule1, validationRule2],
+                validations: validationRules,
                 tasks: []
             };
 
-            const context: WorkflowContext = {
-                age: 20,
-                score: 75
-            };
+            const data = { age: 20, name: 'John' };
 
-            const result = await workflowEngine.executeWorkflow(workflow, context);
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
                 success: true,
-                context,
+                context: { data },
                 validationResults: [
                     {
-                        rule: validationRule1,
+                        rule: validationRules[0],
                         success: true
                     },
                     {
-                        rule: validationRule2,
+                        rule: validationRules[1],
                         success: true
                     }
                 ],
@@ -85,7 +89,7 @@ describe.only('WorkflowEngine Validation', () => {
             });
         });
 
-        it('should stop execution when validation fails with stop on fail', async () => {
+        it('should stop execution on validation failure', async () => {
             const validationRule: ValidationRule = {
                 name: 'age-validation',
                 condition: 'age >= 18',
@@ -93,20 +97,20 @@ describe.only('WorkflowEngine Validation', () => {
             };
 
             const workflow: Workflow = {
-                id: 'test-workflow-3',
+                id: 'test-workflow',
                 name: 'Test Workflow',
                 trigger: 'test',
                 validations: [validationRule],
                 tasks: []
             };
 
-            const context: WorkflowContext = { age: 16 };
+            const data = { age: 16 };
 
-            const result = await workflowEngine.executeWorkflow(workflow, context);
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
                 success: false,
-                context,
+                context: { data },
                 validationResults: [{
                     rule: validationRule,
                     success: false,
@@ -116,7 +120,7 @@ describe.only('WorkflowEngine Validation', () => {
             });
         });
 
-        it('should continue execution when validation fails with continue on fail', async () => {
+        it('should continue execution on validation failure when configured', async () => {
             const validationRule: ValidationRule = {
                 name: 'age-validation',
                 condition: 'age >= 18',
@@ -124,20 +128,20 @@ describe.only('WorkflowEngine Validation', () => {
             };
 
             const workflow: Workflow = {
-                id: 'test-workflow-4',
+                id: 'test-workflow',
                 name: 'Test Workflow',
                 trigger: 'test',
                 validations: [validationRule],
                 tasks: []
             };
 
-            const context: WorkflowContext = { age: 16 };
+            const data = { age: 16 };
 
-            const result = await workflowEngine.executeWorkflow(workflow, context);
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
                 success: true,
-                context,
+                context: { data },
                 validationResults: [{
                     rule: validationRule,
                     success: false,

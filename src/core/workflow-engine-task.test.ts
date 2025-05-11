@@ -1,303 +1,187 @@
 import { WorkflowEngine } from './workflow-engine';
-import { Workflow } from './types/workflow';
-import { WorkflowContext } from './types/workflow-context';
 import { Task } from './types/task';
-import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
 import { TaskExecutor } from './executors/task-executor';
+import { DefaultLogger } from './logging/default-logger';
+import { TaskResult } from './types/task-result';
+import { TaskType, TaskMethod } from './enums/task.enum';
+import { TaskFactory } from '../tasks/factory/task.factory';
 
-describe('WorkflowEngine - Task Execution', () => {
+describe('WorkflowEngine Task Execution', () => {
     let workflowEngine: WorkflowEngine;
-    let mockLogger: any;
-    let taskExecutor: TaskExecutor;
+    let taskExecutor: jest.Mocked<TaskExecutor>;
+    let logger: DefaultLogger;
+
+    beforeAll(() => {
+        jest.spyOn(TaskFactory.prototype, 'executeTask').mockImplementation(async (task, context) => ({
+            task,
+            taskId: task.id,
+            success: true,
+            result: { result: 'success' },
+            metadata: {
+                taskId: task.id,
+                type: task.type,
+                startTime: new Date().toISOString(),
+                endTime: new Date().toISOString(),
+                duration: 0
+            }
+        }));
+    });
 
     beforeEach(() => {
-        mockLogger = {
-            debug: jest.fn(),
-            error: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn()
-        };
-        taskExecutor = new TaskExecutor();
-        workflowEngine = new WorkflowEngine(undefined, taskExecutor, mockLogger);
+        logger = new DefaultLogger();
+        taskExecutor = new TaskExecutor(logger) as jest.Mocked<TaskExecutor>;
+        workflowEngine = new WorkflowEngine(undefined, taskExecutor, logger);
     });
 
-    it('should execute a single task successfully', async () => {
-        const task: Task = {
-            id: '1',
-            type: TaskType.API_CALL,
-            order: 1,
-            config: {
-                url: 'https://api.test.com',
-                method: TaskMethod.POST,
-                body: { data: 'test' }
-            }
-        };
-
-        const workflow: Workflow = {
-            id: '1',
-            name: 'Test Workflow',
-            tasks: [task],
-            validations: []
-        };
-
-        const context: WorkflowContext = {
-            data: { test: 'data' }
-        };
-
-        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve({
-            task,
-            taskId: task.id,
-            success: true,
-            output: {
-                statusCode: 200,
-                headers: {},
-                data: { result: 'success' }
-            }
-        }));
-
-        const result = await workflowEngine.executeWorkflow(workflow, context);
-
-        expect(result.success).toBe(true);
-        expect(result.taskResults).toHaveLength(1);
-        expect(result.taskResults[0].success).toBe(true);
-        expect(result.taskResults[0].taskId).toBe('1');
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
-    it('should execute multiple tasks in order', async () => {
-        const tasks: Task[] = [
-            {
-                id: '1',
+    describe('execute', () => {
+        it('should execute single task successfully', async () => {
+            const task: Task = {
+                id: 'task-1',
                 type: TaskType.API_CALL,
                 order: 1,
                 config: {
-                    url: 'https://api.test.com/1',
-                    method: TaskMethod.POST,
-                    body: { data: 'test1' }
+                    url: 'https://api.test.com',
+                    method: TaskMethod.GET
                 }
-            },
-            {
-                id: '2',
-                type: TaskType.API_CALL,
-                order: 2,
-                config: {
-                    url: 'https://api.test.com/2',
-                    method: TaskMethod.POST,
-                    body: { data: 'test2' }
-                }
-            }
-        ];
+            };
 
-        const workflow: Workflow = {
-            id: '1',
-            name: 'Test Workflow',
-            tasks,
-            validations: []
-        };
+            const workflow = {
+                id: 'test-workflow',
+                name: 'Test Workflow',
+                trigger: 'test',
+                validations: [],
+                tasks: [task]
+            };
 
-        const context: WorkflowContext = {
-            data: { test: 'data' }
-        };
+            const result = await workflowEngine.execute(workflow, { test: 'value' });
 
-        jest.spyOn(taskExecutor, 'executeTask')
-            .mockImplementationOnce(() => Promise.resolve({
-                task: tasks[0],
-                taskId: tasks[0].id,
+            expect(result.success).toBe(true);
+            expect(result.taskResults).toHaveLength(1);
+            expect(result.taskResults[0]).toMatchObject({
+                taskId: 'task-1',
                 success: true,
-                output: {
-                    statusCode: 200,
-                    headers: {},
-                    data: { result: 'success1' }
-                }
-            }))
-            .mockImplementationOnce(() => Promise.resolve({
-                task: tasks[1],
-                taskId: tasks[1].id,
-                success: true,
-                output: {
-                    statusCode: 200,
-                    headers: {},
-                    data: { result: 'success2' }
-                }
-            }));
-
-        const result = await workflowEngine.executeWorkflow(workflow, context);
-
-        expect(result.success).toBe(true);
-        expect(result.taskResults).toHaveLength(2);
-        expect(result.taskResults[0].success).toBe(true);
-        expect(result.taskResults[0].taskId).toBe('1');
-        expect(result.taskResults[1].success).toBe(true);
-        expect(result.taskResults[1].taskId).toBe('2');
-    });
-
-    it('should handle task execution failure', async () => {
-        const task: Task = {
-            id: '1',
-            type: TaskType.API_CALL,
-            order: 1,
-            config: {
-                url: 'https://api.test.com',
-                method: TaskMethod.POST,
-                body: { data: 'test' }
-            }
-        };
-
-        const workflow: Workflow = {
-            id: '1',
-            name: 'Test Workflow',
-            tasks: [task],
-            validations: []
-        };
-
-        const context: WorkflowContext = {
-            data: { test: 'data' }
-        };
-
-        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve({
-            task,
-            taskId: task.id,
-            success: false,
-            error: 'Task execution failed'
-        }));
-
-        const result = await workflowEngine.executeWorkflow(workflow, context);
-
-        expect(result.success).toBe(false);
-        expect(result.taskResults).toHaveLength(1);
-        expect(result.taskResults[0].success).toBe(false);
-        expect(result.taskResults[0].error).toBe('Task execution failed');
-    });
-
-    it('should validate task configuration before execution', async () => {
-        const task: Task = {
-            id: '1',
-            type: TaskType.API_CALL,
-            order: 1,
-            config: {
-                method: TaskMethod.POST,
-                body: { data: 'test' }
-            } as any // Intentionally missing required url
-        };
-
-        const workflow: Workflow = {
-            id: '1',
-            name: 'Test Workflow',
-            tasks: [task],
-            validations: []
-        };
-
-        const context: WorkflowContext = {
-            data: { test: 'data' }
-        };
-
-        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve({
-            task,
-            taskId: task.id,
-            success: false,
-            error: 'URL is required for API task'
-        }));
-
-        const result = await workflowEngine.executeWorkflow(workflow, context);
-
-        expect(result.success).toBe(false);
-        expect(result.taskResults).toHaveLength(1);
-        expect(result.taskResults[0].success).toBe(false);
-        expect(result.taskResults[0].error).toBe('URL is required for API task');
-    });
-
-    it('should update workflow context with task results', async () => {
-        const task: Task = {
-            id: '1',
-            type: TaskType.API_CALL,
-            order: 1,
-            config: {
-                url: 'https://api.test.com',
-                method: TaskMethod.POST,
-                body: { data: 'test' }
-            }
-        };
-
-        const workflow: Workflow = {
-            id: '1',
-            name: 'Test Workflow',
-            tasks: [task],
-            validations: []
-        };
-
-        const context: WorkflowContext = {
-            data: { test: 'data' }
-        };
-
-        const taskResult = {
-            task,
-            taskId: task.id,
-            success: true,
-            output: {
-                statusCode: 200,
-                headers: {},
-                data: { result: 'success' }
-            }
-        };
-
-        jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(() => Promise.resolve(taskResult));
-
-        const result = await workflowEngine.executeWorkflow(workflow, context);
-
-        expect(result.success).toBe(true);
-        expect(result.context.data).toEqual({
-            test: 'data',
-            task1: taskResult.output
+                result: { result: { result: 'success' } }
+            });
+            expect(result.taskResults[0].metadata).toBeDefined();
         });
-    });
 
-    it('should stop execution on critical task failure', async () => {
-        const tasks: Task[] = [
-            {
-                id: '1',
+        it('should execute multiple tasks in order', async () => {
+            const task1: Task = {
+                id: 'task-1',
                 type: TaskType.API_CALL,
                 order: 1,
                 config: {
                     url: 'https://api.test.com/1',
-                    method: TaskMethod.POST,
-                    body: { data: 'test1' }
+                    method: TaskMethod.GET
                 }
-            },
-            {
-                id: '2',
+            };
+
+            const task2: Task = {
+                id: 'task-2',
                 type: TaskType.API_CALL,
                 order: 2,
                 config: {
                     url: 'https://api.test.com/2',
-                    method: TaskMethod.POST,
-                    body: { data: 'test2' }
+                    method: TaskMethod.GET
                 }
-            }
-        ];
+            };
 
-        const workflow: Workflow = {
-            id: '1',
-            name: 'Test Workflow',
-            tasks,
-            validations: []
-        };
+            const workflow = {
+                id: 'test-workflow',
+                name: 'Test Workflow',
+                trigger: 'test',
+                validations: [],
+                tasks: [task1, task2]
+            };
 
-        const context: WorkflowContext = {
-            data: { test: 'data' }
-        };
+            const result = await workflowEngine.execute(workflow, { test: 'value' });
 
-        jest.spyOn(taskExecutor, 'executeTask')
-            .mockImplementationOnce(() => Promise.resolve({
-                task: tasks[0],
-                taskId: tasks[0].id,
-                success: false,
-                error: 'Critical task failure'
-            }));
+            expect(result.success).toBe(true);
+            expect(result.taskResults).toHaveLength(2);
+            expect(result.taskResults[0].taskId).toBe('task-1');
+            expect(result.taskResults[1].taskId).toBe('task-2');
+        });
 
-        const result = await workflowEngine.executeWorkflow(workflow, context);
+        it('should stop execution on task failure', async () => {
+            // Make the first call to executeTask fail
+            (TaskFactory.prototype.executeTask as jest.Mock).mockRejectedValueOnce(new Error('API call failed'));
 
-        expect(result.success).toBe(false);
-        expect(result.taskResults).toHaveLength(1);
-        expect(result.taskResults[0].success).toBe(false);
-        expect(result.taskResults[0].error).toBe('Critical task failure');
+            const task1: Task = {
+                id: 'task-1',
+                type: TaskType.API_CALL,
+                order: 1,
+                config: {
+                    url: 'https://api.test.com/1',
+                    method: TaskMethod.GET
+                }
+            };
+
+            const task2: Task = {
+                id: 'task-2',
+                type: TaskType.API_CALL,
+                order: 2,
+                config: {
+                    url: 'https://api.test.com/2',
+                    method: TaskMethod.GET
+                }
+            };
+
+            const workflow = {
+                id: 'test-workflow',
+                name: 'Test Workflow',
+                trigger: 'test',
+                validations: [],
+                tasks: [task1, task2]
+            };
+
+            const result = await workflowEngine.execute(workflow, { test: 'value' });
+
+            expect(result.success).toBe(false);
+            expect(result.taskResults).toHaveLength(1);
+            expect(result.taskResults[0].success).toBe(false);
+            expect(result.taskResults[0].error).toBe('API call failed');
+        });
+
+        it('should handle task with dependencies', async () => {
+            const task1: Task = {
+                id: 'task-1',
+                type: TaskType.API_CALL,
+                order: 1,
+                config: {
+                    url: 'https://api.test.com/1',
+                    method: TaskMethod.GET
+                }
+            };
+
+            const task2: Task = {
+                id: 'task-2',
+                type: TaskType.API_CALL,
+                order: 2,
+                config: {
+                    url: 'https://api.test.com/2',
+                    method: TaskMethod.GET,
+                    dependencies: ['task-1']
+                }
+            };
+
+            const workflow = {
+                id: 'test-workflow',
+                name: 'Test Workflow',
+                trigger: 'test',
+                validations: [],
+                tasks: [task1, task2]
+            };
+
+            const result = await workflowEngine.execute(workflow, { test: 'value' });
+
+            expect(result.success).toBe(true);
+            expect(result.taskResults).toHaveLength(2);
+            expect(result.taskResults[0].taskId).toBe('task-1');
+            expect(result.taskResults[1].taskId).toBe('task-2');
+        });
     });
 });

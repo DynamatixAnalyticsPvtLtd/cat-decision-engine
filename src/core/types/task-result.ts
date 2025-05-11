@@ -1,10 +1,13 @@
 import { Task } from './task';
 
 export interface TaskResult {
-    success: boolean;
-    taskId: string;
     task: Task;
+    taskId: string;
+    success: boolean;
+    result?: any;
     error?: string;
-    output?: any;
-    metadata?: Record<string, any>;
+    metadata?: {
+        contextData?: any;
+        [key: string]: any;
+    };
 } 

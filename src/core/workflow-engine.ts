@@ -1,224 +1,94 @@
-import { Workflow, WorkflowContext, WorkflowResult, ValidationResult, TaskResult, Task } from './types';
-import { IWorkflowExecutor } from './interfaces/workflow-executor.interface';
-import { IValidationExecutor } from './interfaces/validation-executor.interface';
-import { ITaskExecutor } from './interfaces/task-executor.interface';
 import { ILogger } from './interfaces/logger.interface';
-import { ValidationExecutor } from './executors/validation-executor';
-import { TaskExecutor } from './executors/task-executor';
-import { ValidationOnFail } from './enums/validation.enum';
 import { DefaultLogger } from './logging/default-logger';
-import { WorkflowError, ValidationError, TaskError, ConfigurationError } from './errors/workflow-error';
+import { TaskFactory } from '../tasks/factory/task.factory';
+import { TaskExecutor } from './executors/task-executor';
+import { ValidationExecutor } from './executors/validation-executor';
+import { Workflow } from './types/workflow';
+import { WorkflowResult } from './types/workflow-result';
+import { WorkflowError } from './errors/workflow-error';
+import { WorkflowContext } from './types/workflow-context';
+import { ValidationResult, TaskResult } from './types';
 
-export class WorkflowEngine implements IWorkflowExecutor {
-    private validationExecutor: IValidationExecutor;
-    private taskExecutor: ITaskExecutor;
-    private logger: ILogger;
-    private readonly maxRetries: number;
+export class WorkflowEngine {
+    private readonly logger: ILogger;
+    private readonly taskFactory: TaskFactory;
+    private readonly taskExecutor: TaskExecutor;
+    private readonly validationExecutor: ValidationExecutor;
+    private readonly maxRetries: number = 3;
+    private readonly defaultTimeout: number = 5000;
 
     constructor(
-        validationExecutor?: IValidationExecutor,
-        taskExecutor?: ITaskExecutor,
-        logger?: ILogger,
-        maxRetries: number = 3
+        validationExecutor?: ValidationExecutor,
+        taskExecutor?: TaskExecutor,
+        logger?: ILogger
     ) {
-        this.validationExecutor = validationExecutor || new ValidationExecutor();
-        this.taskExecutor = taskExecutor || new TaskExecutor();
         this.logger = logger || new DefaultLogger();
-        this.maxRetries = maxRetries;
+        this.taskFactory = new TaskFactory(this.logger);
+        this.taskExecutor = taskExecutor || new TaskExecutor(this.logger);
+        this.validationExecutor = validationExecutor || new ValidationExecutor();
     }
 
-    async executeWorkflow(workflow: Workflow, context: WorkflowContext): Promise<WorkflowResult> {
+    async execute(workflow: Workflow | null, data: any): Promise<{
+        success: boolean;
+        context: WorkflowContext;
+        validationResults: ValidationResult[];
+        taskResults: TaskResult[];
+    }> {
         if (!workflow) {
-            throw new ConfigurationError('Workflow is required');
+            throw new WorkflowError('Workflow is required', 'VALIDATION_ERROR');
         }
-
-        this.logger.info('Starting workflow execution', { workflowName: workflow.name });
-
-        if (!context) {
-            throw new ConfigurationError('Context is required');
-        }
-
-        const validationResults: ValidationResult[] = [];
-        const taskResults: TaskResult[] = [];
 
         try {
+            this.logger.info(`Starting workflow execution: ${workflow.id}`, { workflow, data });
+
+            const context: WorkflowContext = { data };
+            const validationResults: ValidationResult[] = [];
+            const taskResults: TaskResult[] = [];
+
+            let stopOnValidationFail = false;
+
             // Execute validations
-            for (const rule of workflow.validations) {
-                this.logger.debug('Executing validation rule', { rule });
-
-                let result: ValidationResult;
-                let retryCount = 0;
-
-                do {
-                    result = await this.validationExecutor.executeValidation(rule, context);
-
-                    if (!result.success && rule.onFail === ValidationOnFail.RETRY && retryCount < this.maxRetries) {
-                        this.logger.warn('Validation failed, retrying', {
-                            rule,
-                            attempt: retryCount + 1,
-                            maxRetries: this.maxRetries
-                        });
-                        retryCount++;
-                        await this.delay(1000 * retryCount); // Exponential backoff
-                    } else {
-                        break;
-                    }
-                } while (retryCount < this.maxRetries);
-
+            for (const validation of workflow.validations) {
+                const result = await this.validationExecutor.executeValidation(validation, context);
                 validationResults.push(result);
-
-                if (!result.success) {
-                    if (rule.onFail === ValidationOnFail.STOP) {
-                        this.logger.error('Validation failed with stop on fail', { rule, result });
-                        return {
-                            success: false,
-                            context,
-                            validationResults,
-                            taskResults
-                        };
-                    } else if (rule.onFail === ValidationOnFail.FALLBACK && rule.fallback) {
-                        this.logger.warn('Executing fallback validation', { rule });
-                        const fallbackResult = await this.validationExecutor.executeValidation(rule.fallback, context);
-                        validationResults.push(fallbackResult);
-
-                        if (!fallbackResult.success) {
-                            this.logger.error('Fallback validation failed', { rule, result: fallbackResult });
-                            return {
-                                success: false,
-                                context,
-                                validationResults,
-                                taskResults
-                            };
-                        }
-                    }
+                if (!result.success && validation.onFail === 'stop') {
+                    stopOnValidationFail = true;
+                    break;
                 }
+            }
+
+            if (stopOnValidationFail) {
+                return {
+                    success: false,
+                    context,
+                    validationResults,
+                    taskResults
+                };
             }
 
             // Execute tasks
             for (const task of workflow.tasks) {
-                this.logger.debug('Executing task', { task });
-
-                try {
-                    let result: TaskResult;
-                    let retryCount = 0;
-
-                    do {
-                        result = await this.taskExecutor.executeTask(task, context);
-
-                        if (!result.success && task.retry && retryCount < this.maxRetries) {
-                            this.logger.warn('Task failed, retrying', {
-                                task,
-                                attempt: retryCount + 1,
-                                maxRetries: this.maxRetries
-                            });
-                            retryCount++;
-                            await this.delay(1000 * retryCount); // Exponential backoff
-                        } else {
-                            break;
-                        }
-                    } while (retryCount < this.maxRetries);
-
-                    // Update context with task output if available
-                    if (result.output) {
-                        this.logger.debug('Updating context with task output', {
-                            task,
-                            output: result.output
-                        });
-
-                        // Initialize context.data if needed
-                        if (!context.data) {
-                            context.data = {};
-                        }
-
-                        // Store task output in context.data with task ID as key
-                        context.data[`task${task.id}`] = result.output;
-                    }
-
-                    // If task failed, return immediately
-                    if (!result.success) {
-                        return {
-                            success: false,
-                            context,
-                            validationResults,
-                            taskResults: [...taskResults, result]
-                        };
-                    }
-
-                    taskResults.push(result);
-                } catch (error) {
-                    const taskError = new TaskError(
-                        error instanceof Error ? error.message : 'Unknown task error',
-                        task.id
-                    );
-                    this.logger.error('Task execution error', { task, error: taskError });
-
-                    taskResults.push({
-                        task,
-                        taskId: task.id,
-                        success: false,
-                        error: taskError.message
-                    });
-
-                    return {
-                        success: false,
-                        context,
-                        validationResults,
-                        taskResults
-                    };
+                const result = await this.taskExecutor.executeTask(task, context);
+                taskResults.push(result);
+                if (!result.success) {
+                    break;
                 }
             }
 
-            this.logger.info('Workflow executed successfully', {
-                workflowName: workflow.name,
-                validationCount: validationResults.length,
-                taskCount: taskResults.length
-            });
-
-            return {
-                success: true,
+            const success = taskResults.every(result => result.success);
+            const result = {
+                success,
                 context,
                 validationResults,
                 taskResults
             };
+
+            this.logger.info(`Workflow completed successfully: ${workflow.id}`, { result });
+            return result;
+
         } catch (error) {
-            this.logger.error('Workflow execution error', {
-                workflowName: workflow.name,
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
+            this.logger.error(`Workflow execution failed: ${workflow.id}`, { error });
             throw error;
         }
-    }
-
-    async executeTask(task: Task, context: WorkflowContext): Promise<TaskResult> {
-        this.logger.debug('Executing task', { task });
-
-        try {
-            const result = await this.taskExecutor.executeTask(task, context);
-            return {
-                task,
-                taskId: task.id,
-                success: result.success,
-                output: result.output,
-                error: result.error,
-                metadata: result.metadata
-            };
-        } catch (error) {
-            const taskError = new TaskError(
-                error instanceof Error ? error.message : 'Unknown task error',
-                task.id
-            );
-            this.logger.error('Task execution error', { task, error: taskError });
-
-            return {
-                task,
-                taskId: task.id,
-                success: false,
-                error: taskError.message
-            };
-        }
-    }
-
-    private delay(ms: number): Promise<void> {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 } 
