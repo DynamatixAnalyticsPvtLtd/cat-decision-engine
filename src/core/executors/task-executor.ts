@@ -5,13 +5,14 @@ import { TaskType } from '../enums/task.enum';
 import { TaskError } from '../errors/workflow-error';
 import { TaskFactory } from '../../tasks/factory/task.factory';
 import { ILogger } from '../interfaces/logger.interface';
+import { MongoLogger } from '../logging/mongo-logger';
 
 export class TaskExecutor implements ITaskExecutor {
     private taskFactory: TaskFactory;
     private logger: ILogger;
 
     constructor(logger?: ILogger) {
-        this.logger = logger || console;
+        this.logger = logger || new MongoLogger();
         this.taskFactory = new TaskFactory(this.logger);
     }
 

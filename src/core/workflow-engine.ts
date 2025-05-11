@@ -10,6 +10,7 @@ import { WorkflowContext } from './types/workflow-context';
 import { ValidationResultItem } from './types/validation-result';
 import { TaskResult } from './types/task-result';
 import { Task } from './types/task';
+import { MongoLogger } from './logging/mongo-logger';
 
 export class WorkflowEngine {
     private readonly logger: ILogger;
@@ -24,7 +25,7 @@ export class WorkflowEngine {
         taskExecutor?: TaskExecutor,
         logger?: ILogger
     ) {
-        this.logger = logger || new DefaultLogger();
+        this.logger = logger || new MongoLogger();
         this.taskFactory = new TaskFactory(this.logger);
         this.taskExecutor = taskExecutor || new TaskExecutor(this.logger);
         this.validationExecutor = validationExecutor || new ValidationExecutor(this.logger);

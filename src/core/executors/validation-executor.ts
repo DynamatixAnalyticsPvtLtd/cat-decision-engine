@@ -1,12 +1,13 @@
 import { ValidationRule } from '../types/validation-rule';
 import { ValidationResult, ValidationResultItem } from '../types/validation-result';
 import { ILogger } from '../interfaces/logger.interface';
+import { MongoLogger } from '../logging/mongo-logger';
 
 export class ValidationExecutor {
     private logger: ILogger;
 
-    constructor(logger: ILogger) {
-        this.logger = logger;
+    constructor(logger?: ILogger) {
+        this.logger = logger || new MongoLogger();
     }
 
     async execute(rules: ValidationRule[], data: any): Promise<ValidationResult> {
@@ -34,6 +35,7 @@ export class ValidationExecutor {
                 });
                 this.logger.error('Validation error', { rule, error });
             }
+
         }
 
         return {

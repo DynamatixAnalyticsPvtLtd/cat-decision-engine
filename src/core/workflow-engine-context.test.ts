@@ -2,19 +2,26 @@ import { WorkflowEngine } from './workflow-engine';
 import { Workflow, Task } from './types';
 import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
 import { TaskExecutor } from './executors/task-executor';
-import { DefaultLogger } from './logging/default-logger';
 import { ValidationExecutor } from './executors/validation-executor';
+import { ILogger } from './interfaces/logger.interface';
 
 jest.mock('./executors/task-executor');
+jest.mock('./executors/validation-executor');
 
 describe('WorkflowEngine Context', () => {
     let workflowEngine: WorkflowEngine;
     let taskExecutor: jest.Mocked<TaskExecutor>;
     let validationExecutor: jest.Mocked<ValidationExecutor>;
-    let logger: DefaultLogger;
+    let logger: jest.Mocked<ILogger>;
 
     beforeEach(() => {
-        logger = new DefaultLogger();
+        // Create a mock logger
+        logger = {
+            info: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn()
+        } as unknown as jest.Mocked<ILogger>;
 
         // Create proper jest mocks
         taskExecutor = {

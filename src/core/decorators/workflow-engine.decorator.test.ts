@@ -6,23 +6,32 @@ import { ValidationExecutor } from '../executors/validation-executor';
 import { ValidationRule } from '../types/validation-rule';
 import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';
 import { ValidationOnFail } from '../enums/validation.enum';
+import { WorkflowEngine } from '../workflow-engine';
+import { ILogger } from '../interfaces/logger.interface';
 
 jest.mock('../executors/validation-executor');
 
 describe('WorkflowEngine Decorators', () => {
     let mockWorkflowEngine: jest.Mocked<IWorkflowEngine>;
-    let logger: DefaultLogger;
     let validationExecutor: jest.Mocked<ValidationExecutor>;
+    let logger: ILogger;
     let workflow: Workflow;
     let data: any;
 
     beforeEach(() => {
+        // Create a mock logger
+        logger = {
+            info: jest.fn(),
+            error: jest.fn(),
+            warn: jest.fn(),
+            debug: jest.fn()
+        } as unknown as jest.Mocked<ILogger>;
+        validationExecutor = {
+            execute: jest.fn()
+        } as unknown as jest.Mocked<ValidationExecutor>;
         mockWorkflowEngine = {
             execute: jest.fn()
-        } as jest.Mocked<IWorkflowEngine>;
-
-        logger = new DefaultLogger();
-        validationExecutor = new ValidationExecutor(logger) as jest.Mocked<ValidationExecutor>;
+        } as unknown as jest.Mocked<IWorkflowEngine>;
 
         workflow = {
             id: 'test-workflow',

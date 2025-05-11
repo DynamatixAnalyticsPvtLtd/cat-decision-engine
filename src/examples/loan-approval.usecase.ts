@@ -1,11 +1,16 @@
 import { Workflow } from '../core/types/workflow';
 import { WorkflowMethod } from '../core/decorators/workflow-method.decorator';
 import { IWorkflowStore, MongoWorkflowStore } from '../storage/workflow-store';
-import { DefaultLogger } from '../core/logging/default-logger';
+import { ILogger } from '../core/logging/logger';
+import { MongoLogger } from '../core/logging/mongo-logger';
 
 // Example of how a client would use the library
 export class LoanApprovalUseCase {
-    constructor(private readonly workflowStore: IWorkflowStore) { }
+    private logger: ILogger;
+
+    constructor(private readonly workflowStore: IWorkflowStore) {
+        this.logger = new MongoLogger();
+    }
 
     @WorkflowMethod()
     async processLoanApplication(data: any) {
@@ -41,7 +46,7 @@ export class LoanApprovalUseCase {
 async function example() {
     // In a real application, you would get the MongoDB collection from your database connection
     const collection = {}; // Replace with actual MongoDB collection
-    const logger = new DefaultLogger();
+    const logger = new MongoLogger();
     const workflowStore = new MongoWorkflowStore(collection, logger);
 
     const useCase = new LoanApprovalUseCase(workflowStore);
