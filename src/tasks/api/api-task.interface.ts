@@ -1,5 +1,6 @@
 import { BaseTask } from '../base/task.interface';
 import { TaskMethod } from '../enums/task.enum';
+import { Task } from '../../core/types/task';
 
 export interface ApiTaskConfig {
     url: string;
@@ -14,7 +15,7 @@ export interface ApiTaskConfig {
     };
 }
 
-export interface ApiTask extends BaseTask {
+export interface ApiTask extends Task {
     config: ApiTaskConfig;
 }
 

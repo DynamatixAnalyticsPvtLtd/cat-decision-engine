@@ -11,6 +11,7 @@ describe('TaskExecutor', () => {
     let taskExecutor: TaskExecutor;
     let mockLogger: any;
     let mockTaskFactory: jest.Mocked<TaskFactory>;
+    let mockExecutor: { execute: jest.Mock };
 
     beforeEach(() => {
         mockLogger = {
@@ -18,8 +19,11 @@ describe('TaskExecutor', () => {
             error: jest.fn()
         };
 
+        mockExecutor = { execute: jest.fn() };
+
         mockTaskFactory = {
-            executeTask: jest.fn()
+            executeTask: jest.fn(),
+            getTaskExecutor: jest.fn().mockReturnValue(mockExecutor)
         } as any;
 
         (TaskFactory as jest.Mock).mockImplementation(() => mockTaskFactory);
@@ -45,22 +49,20 @@ describe('TaskExecutor', () => {
         };
 
         it('should execute task successfully', async () => {
-            const mockResult: TaskResult = {
-                task: mockTask,
-                taskId: '1',
-                success: true,
-                output: { data: 'test' },
-                metadata: {
-                    contextData: mockContext.data
-                }
-            };
-
-            mockTaskFactory.executeTask.mockResolvedValueOnce(mockResult);
+            const mockOutput = { data: 'test' };
+            mockExecutor.execute.mockResolvedValueOnce(mockOutput);
 
             const result = await taskExecutor.execute(mockTask, mockContext);
 
-            expect(result).toEqual(mockResult);
-            expect(mockTaskFactory.executeTask).toHaveBeenCalledWith(mockTask);
+            expect(result).toEqual({
+                task: mockTask,
+                taskId: '1',
+                success: true,
+                output: mockOutput,
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
             expect(mockLogger.debug).toHaveBeenCalledWith(
                 'Starting task execution',
                 { taskId: '1', type: TaskType.API_CALL }
@@ -69,7 +71,7 @@ describe('TaskExecutor', () => {
 
         it('should handle task validation error', async () => {
             const error = new TaskError('Invalid task configuration', '1');
-            mockTaskFactory.executeTask.mockRejectedValueOnce(error);
+            mockExecutor.execute.mockRejectedValueOnce(error);
 
             const result = await taskExecutor.execute(mockTask, mockContext);
 
@@ -94,7 +96,7 @@ describe('TaskExecutor', () => {
 
         it('should handle task execution error', async () => {
             const error = new Error('Task execution failed');
-            mockTaskFactory.executeTask.mockRejectedValueOnce(error);
+            mockExecutor.execute.mockRejectedValueOnce(error);
 
             const result = await taskExecutor.execute(mockTask, mockContext);
 
@@ -147,50 +149,40 @@ describe('TaskExecutor', () => {
         };
 
         it('should execute all tasks successfully', async () => {
-            const mockResults: TaskResult[] = [
-                {
-                    task: mockTasks[0],
-                    taskId: '1',
-                    success: true,
-                    output: { data: 'test1' },
-                    metadata: {
-                        contextData: mockContext.data
-                    }
-                },
-                {
-                    task: mockTasks[1],
-                    taskId: '2',
-                    success: true,
-                    output: { data: 'test2' },
-                    metadata: {
-                        contextData: mockContext.data
-                    }
-                }
+            const mockOutputs = [
+                { data: 'test1' },
+                { data: 'test2' }
             ];
-
-            mockTaskFactory.executeTask
-                .mockResolvedValueOnce(mockResults[0])
-                .mockResolvedValueOnce(mockResults[1]);
+            mockExecutor.execute
+                .mockResolvedValueOnce(mockOutputs[0])
+                .mockResolvedValueOnce(mockOutputs[1]);
 
             const results = await taskExecutor.executeBatch(mockTasks, mockContext);
 
             expect(results).toHaveLength(2);
-            expect(results[0]).toEqual(mockResults[0]);
-            expect(results[1]).toEqual(mockResults[1]);
+            expect(results[0]).toEqual({
+                task: mockTasks[0],
+                taskId: '1',
+                success: true,
+                output: mockOutputs[0],
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
+            expect(results[1]).toEqual({
+                task: mockTasks[1],
+                taskId: '2',
+                success: true,
+                output: mockOutputs[1],
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
         });
 
         it('should stop execution on task failure with stop on error', async () => {
-            const mockResults: TaskResult[] = [
-                {
-                    task: mockTasks[0],
-                    taskId: '1',
-                    success: false,
-                    error: 'Task failed',
-                    metadata: {
-                        contextData: mockContext.data
-                    }
-                }
-            ];
+            // Simulate failure on first task
+            mockExecutor.execute.mockRejectedValueOnce(new Error('Task failed'));
 
             const tasksWithStopOnError = [
                 {
@@ -200,46 +192,46 @@ describe('TaskExecutor', () => {
                 mockTasks[1]
             ];
 
-            mockTaskFactory.executeTask.mockResolvedValueOnce(mockResults[0]);
-
             const results = await taskExecutor.executeBatch(tasksWithStopOnError, mockContext);
 
             expect(results).toHaveLength(1);
-            expect(results[0]).toEqual(mockResults[0]);
-            expect(mockTaskFactory.executeTask).toHaveBeenCalledTimes(1);
+            expect(results[0]).toEqual({
+                task: tasksWithStopOnError[0],
+                taskId: '1',
+                success: false,
+                error: 'Task failed',
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
         });
 
         it('should continue execution on task failure without stop on error', async () => {
-            const mockResults: TaskResult[] = [
-                {
-                    task: mockTasks[0],
-                    taskId: '1',
-                    success: false,
-                    error: 'Task failed',
-                    metadata: {
-                        contextData: mockContext.data
-                    }
-                },
-                {
-                    task: mockTasks[1],
-                    taskId: '2',
-                    success: true,
-                    output: { data: 'test2' },
-                    metadata: {
-                        contextData: mockContext.data
-                    }
-                }
-            ];
-
-            mockTaskFactory.executeTask
-                .mockResolvedValueOnce(mockResults[0])
-                .mockResolvedValueOnce(mockResults[1]);
+            mockExecutor.execute
+                .mockRejectedValueOnce(new Error('Task failed'))
+                .mockResolvedValueOnce({ data: 'test2' });
 
             const results = await taskExecutor.executeBatch(mockTasks, mockContext);
 
             expect(results).toHaveLength(2);
-            expect(results[0]).toEqual(mockResults[0]);
-            expect(results[1]).toEqual(mockResults[1]);
+            expect(results[0]).toEqual({
+                task: mockTasks[0],
+                taskId: '1',
+                success: false,
+                error: 'Task failed',
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
+            expect(results[1]).toEqual({
+                task: mockTasks[1],
+                taskId: '2',
+                success: true,
+                output: { data: 'test2' },
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
         });
     });
 }); 

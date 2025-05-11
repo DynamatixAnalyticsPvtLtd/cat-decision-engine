@@ -56,16 +56,20 @@ export class WorkflowEngine {
             }
 
             // Execute tasks using TaskExecutor
-            const taskResult = await this.taskExecutor.executeBatch(workflow.tasks, context);
-            taskResults.push(...taskResult);
-            if (taskResult.some(result => !result.success)) {
-                return {
-                    success: false,
-                    context,
-                    validationResults,
-                    taskResults,
-                    error: 'Task execution failed'
-                };
+            if (workflow.tasks && workflow.tasks.length > 0) {
+                const taskResult = await this.taskExecutor.executeBatch(workflow.tasks, context);
+                if (taskResult) {
+                    taskResults.push(...taskResult);
+                    if (taskResult.some(result => !result.success)) {
+                        return {
+                            success: false,
+                            context,
+                            validationResults,
+                            taskResults,
+                            error: 'Task execution failed'
+                        };
+                    }
+                }
             }
 
             const result: WorkflowResult = {

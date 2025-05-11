@@ -1,6 +1,7 @@
 import { ILogger } from '../../core/interfaces/logger.interface';
 import { TaskType } from '../enums/task.enum';
-import { Task, TaskResult } from '../../core/types/task';
+import { Task } from '../../core/types/task';
+import { TaskResult } from '../../core/types/task-result';
 import { TaskError } from '../../core/errors/workflow-error';
 import { ApiTaskExecutor } from '../api/api-task.executor';
 import { TaskValidationService } from '../../core/services/task-validation.service';
@@ -35,7 +36,15 @@ export class TaskFactory {
             // Get executor for task type
             const executor = this.getTaskExecutor(task.type);
             if (!executor) {
-                throw new TaskError(`Unsupported task type: ${task.type}`);
+                return {
+                    task,
+                    taskId: task.id,
+                    success: false,
+                    error: `Unsupported task type: ${task.type}`,
+                    metadata: {
+                        contextData: context.data
+                    }
+                };
             }
 
             // Execute task
@@ -43,6 +52,7 @@ export class TaskFactory {
 
             // Return task result
             return {
+                task,
                 taskId: task.id,
                 success: true,
                 output,
@@ -57,11 +67,15 @@ export class TaskFactory {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
 
-            if (error instanceof TaskError) {
-                throw error;
-            }
-
-            throw new TaskError(error instanceof Error ? error.message : 'Unknown error');
+            return {
+                task,
+                taskId: task.id,
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+                metadata: {
+                    contextData: context.data
+                }
+            };
         }
     }
 } 

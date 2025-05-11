@@ -7,7 +7,7 @@ import { createDecoratedWorkflowEngine } from '../core/decorators/workflow-engin
 import { WorkflowEngine } from '../core/workflow-engine';
 import { DefaultLogger } from '../core/logging/default-logger';
 import { ValidationExecutor } from '../core/executors/validation-executor';
-import { ValidationOnFail } from 'core/enums/validation.enum';
+import { ValidationOnFail } from '../core/enums/validation.enum';
 // Define validation rules
 const validationRules: ValidationRule[] = [
     {

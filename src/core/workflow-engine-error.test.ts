@@ -5,16 +5,31 @@ import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
 import { TaskError } from './errors/workflow-error';
 import { TaskExecutor } from './executors/task-executor';
 import { DefaultLogger } from './logging/default-logger';
+import { ValidationExecutor } from './executors/validation-executor';
+
+jest.mock('./executors/task-executor');
+jest.mock('./executors/validation-executor');
 
 describe('WorkflowEngine Error Handling', () => {
     let workflowEngine: WorkflowEngine;
-    let taskExecutor: TaskExecutor;
+    let taskExecutor: jest.Mocked<TaskExecutor>;
+    let validationExecutor: jest.Mocked<ValidationExecutor>;
     let logger: DefaultLogger;
 
     beforeEach(() => {
         logger = new DefaultLogger();
-        taskExecutor = new TaskExecutor(logger);
-        workflowEngine = new WorkflowEngine(undefined, taskExecutor, logger);
+
+        // Create proper jest mocks
+        taskExecutor = {
+            execute: jest.fn(),
+            executeBatch: jest.fn()
+        } as unknown as jest.Mocked<TaskExecutor>;
+
+        validationExecutor = {
+            execute: jest.fn()
+        } as unknown as jest.Mocked<ValidationExecutor>;
+
+        workflowEngine = new WorkflowEngine(validationExecutor, taskExecutor, logger);
     });
 
     describe('execute', () => {
@@ -46,6 +61,15 @@ describe('WorkflowEngine Error Handling', () => {
 
             const data = { age: 'invalid' };
 
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: false,
+                validationResults: [{
+                    rule: validationRule,
+                    success: false,
+                    message: 'Validation failed: age >= 18'
+                }]
+            });
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
@@ -54,9 +78,10 @@ describe('WorkflowEngine Error Handling', () => {
                 validationResults: [{
                     rule: validationRule,
                     success: false,
-                    error: 'Validation failed: age >= 18'
+                    message: 'Validation failed: age >= 18'
                 }],
-                taskResults: []
+                taskResults: [],
+                error: 'Validation failed'
             });
         });
 
@@ -83,14 +108,18 @@ describe('WorkflowEngine Error Handling', () => {
 
             const data = { test: 'value' };
 
-            // Mock task executor to throw error
-            jest.spyOn(taskExecutor, 'execute').mockImplementationOnce(async () => ({
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
+            taskExecutor.executeBatch.mockResolvedValueOnce([{
                 task,
                 taskId: task.id,
                 success: false,
                 error: 'Network error',
                 metadata: { contextData: data }
-            }));
+            }]);
 
             const result = await workflowEngine.execute(workflow, data);
 
@@ -104,8 +133,27 @@ describe('WorkflowEngine Error Handling', () => {
                     success: false,
                     error: 'Network error',
                     metadata: { contextData: data }
-                }]
+                }],
+                error: 'Task execution failed'
             });
+        });
+
+        it('should handle unexpected errors', async () => {
+            const workflow: Workflow = {
+                id: 'test-workflow',
+                name: 'Test Workflow',
+                trigger: 'test',
+                validations: [],
+                tasks: []
+            };
+
+            const data = { test: 'value' };
+
+            validationExecutor.execute.mockRejectedValueOnce(new Error('Unexpected error'));
+
+            await expect(workflowEngine.execute(workflow, data))
+                .rejects
+                .toThrow('Unexpected error');
         });
     });
 
@@ -120,6 +168,13 @@ describe('WorkflowEngine Error Handling', () => {
             };
 
             const data = { test: 'value' };
+
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
+            taskExecutor.executeBatch.mockResolvedValueOnce([]);
 
             const result = await workflowEngine.execute(workflow, data);
 
@@ -153,6 +208,19 @@ describe('WorkflowEngine Error Handling', () => {
 
             const data = { test: 'value' };
 
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
+            taskExecutor.executeBatch.mockResolvedValueOnce([{
+                task,
+                taskId: task.id,
+                success: false,
+                error: `Unsupported task type: invalid_type`,
+                metadata: { contextData: data }
+            }]);
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
@@ -165,7 +233,8 @@ describe('WorkflowEngine Error Handling', () => {
                     success: false,
                     error: `Unsupported task type: invalid_type`,
                     metadata: { contextData: data }
-                }]
+                }],
+                error: 'Task execution failed'
             });
         });
 
@@ -191,6 +260,19 @@ describe('WorkflowEngine Error Handling', () => {
 
             const data = { test: 'value' };
 
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
+            taskExecutor.executeBatch.mockResolvedValueOnce([{
+                task,
+                taskId: task.id,
+                success: false,
+                error: 'URL is required for API tasks',
+                metadata: { contextData: data }
+            }]);
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
@@ -203,7 +285,8 @@ describe('WorkflowEngine Error Handling', () => {
                     success: false,
                     error: 'URL is required for API tasks',
                     metadata: { contextData: data }
-                }]
+                }],
+                error: 'Task execution failed'
             });
         });
 
@@ -231,14 +314,18 @@ describe('WorkflowEngine Error Handling', () => {
 
             const data = { test: 'value' };
 
-            // Mock task executor to simulate timeout
-            jest.spyOn(taskExecutor, 'execute').mockImplementationOnce(async () => ({
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
+            taskExecutor.executeBatch.mockResolvedValueOnce([{
                 task,
                 taskId: task.id,
                 success: false,
                 error: 'timeout of 1000ms exceeded',
                 metadata: { contextData: data }
-            }));
+            }]);
 
             const result = await workflowEngine.execute(workflow, data);
 
@@ -252,7 +339,8 @@ describe('WorkflowEngine Error Handling', () => {
                     success: false,
                     error: 'timeout of 1000ms exceeded',
                     metadata: { contextData: data }
-                }]
+                }],
+                error: 'Task execution failed'
             });
         });
     });

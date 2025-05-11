@@ -1,7 +1,9 @@
 import { MongoClient } from 'mongodb';
-import { Workflow, TaskType, TaskMethod } from '../core/types/workflow';
+import { Workflow } from '../core/types/workflow';
+import { TaskType, TaskMethod } from '../core/enums/task.enum';
+import { ValidationOnFail } from '../core/enums/validation.enum';
 import dotenv from 'dotenv';
-import { ValidationOnFail } from 'core/enums/validation.enum';
+
 // Load environment variables
 dotenv.config();
 
@@ -54,29 +56,33 @@ async function seedWorkflows() {
                         id: 'credit-check',
                         name: 'Credit Score Check',
                         type: TaskType.API_CALL,
-                        method: TaskMethod.GET,
-                        url: 'https://api.credit-check.com/score',
-                        headers: {
-                            'Authorization': 'Bearer ${CREDIT_CHECK_API_KEY}'
-                        },
-                        body: {
-                            applicantName: '${formData.applicantName}'
-                        },
-                        retryPolicy: {
-                            maxRetries: 3,
-                            retryDelay: 1000
+                        order: 1,
+                        config: {
+                            url: 'https://api.credit-check.com/score',
+                            method: TaskMethod.GET,
+                            headers: {
+                                'Authorization': 'Bearer ${CREDIT_CHECK_API_KEY}'
+                            },
+                            body: {
+                                applicantName: '${formData.applicantName}'
+                            },
+                            timeout: 5000,
+                            retries: 3
                         }
                     },
                     {
                         id: 'risk-assessment',
                         name: 'Risk Assessment',
                         type: TaskType.API_CALL,
-                        method: TaskMethod.POST,
-                        url: 'https://api.risk-assessment.com/calculate',
-                        body: {
-                            loanAmount: '${formData.loanAmount}',
-                            annualIncome: '${formData.annualIncome}',
-                            creditScore: '${credit-check.result.score}'
+                        order: 2,
+                        config: {
+                            url: 'https://api.risk-assessment.com/calculate',
+                            method: TaskMethod.POST,
+                            body: {
+                                loanAmount: '${formData.loanAmount}',
+                                annualIncome: '${formData.annualIncome}',
+                                creditScore: '${credit-check.result.score}'
+                            }
                         }
                     }
                 ]
@@ -108,27 +114,33 @@ async function seedWorkflows() {
                         id: 'medical-check',
                         name: 'Medical History Check',
                         type: TaskType.API_CALL,
-                        method: TaskMethod.GET,
-                        url: 'https://api.medical-records.com/history',
-                        headers: {
-                            'Authorization': 'Bearer ${MEDICAL_API_KEY}'
-                        },
-                        body: {
-                            policyHolder: '${formData.policyHolder}',
-                            age: '${formData.age}'
+                        order: 1,
+                        config: {
+                            url: 'https://api.medical-records.com/history',
+                            method: TaskMethod.GET,
+                            headers: {
+                                'Authorization': 'Bearer ${MEDICAL_API_KEY}'
+                            },
+                            body: {
+                                policyHolder: '${formData.policyHolder}',
+                                age: '${formData.age}'
+                            }
                         }
                     },
                     {
                         id: 'premium-calculation',
                         name: 'Premium Calculation',
                         type: TaskType.API_CALL,
-                        method: TaskMethod.POST,
-                        url: 'https://api.insurance.com/calculate-premium',
-                        body: {
-                            coverageType: '${formData.coverageType}',
-                            age: '${formData.age}',
-                            preExistingConditions: '${formData.preExistingConditions}',
-                            medicalHistory: '${medical-check.result.history}'
+                        order: 2,
+                        config: {
+                            url: 'https://api.insurance.com/calculate-premium',
+                            method: TaskMethod.POST,
+                            body: {
+                                coverageType: '${formData.coverageType}',
+                                age: '${formData.age}',
+                                preExistingConditions: '${formData.preExistingConditions}',
+                                medicalHistory: '${medical-check.result.history}'
+                            }
                         }
                     }
                 ]
@@ -167,25 +179,31 @@ async function seedWorkflows() {
                         id: 'property-verification',
                         name: 'Property Verification',
                         type: TaskType.API_CALL,
-                        method: TaskMethod.GET,
-                        url: 'https://api.property-verification.com/check',
-                        body: {
-                            propertyValue: '${formData.propertyValue}',
-                            downPayment: '${formData.downPayment}'
+                        order: 1,
+                        config: {
+                            url: 'https://api.property-verification.com/check',
+                            method: TaskMethod.GET,
+                            body: {
+                                propertyValue: '${formData.propertyValue}',
+                                downPayment: '${formData.downPayment}'
+                            }
                         }
                     },
                     {
                         id: 'mortgage-calculation',
                         name: 'Mortgage Terms Calculation',
                         type: TaskType.API_CALL,
-                        method: TaskMethod.POST,
-                        url: 'https://api.mortgage.com/calculate-terms',
-                        body: {
-                            propertyValue: '${formData.propertyValue}',
-                            downPayment: '${formData.downPayment}',
-                            creditScore: '${formData.creditScore}',
-                            employmentHistory: '${formData.employmentHistory}',
-                            propertyVerification: '${property-verification.result}'
+                        order: 2,
+                        config: {
+                            url: 'https://api.mortgage.com/calculate-terms',
+                            method: TaskMethod.POST,
+                            body: {
+                                propertyValue: '${formData.propertyValue}',
+                                downPayment: '${formData.downPayment}',
+                                creditScore: '${formData.creditScore}',
+                                employmentHistory: '${formData.employmentHistory}',
+                                propertyVerification: '${property-verification.result}'
+                            }
                         }
                     }
                 ]

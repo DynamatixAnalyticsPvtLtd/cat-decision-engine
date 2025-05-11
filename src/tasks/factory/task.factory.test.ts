@@ -18,8 +18,8 @@ describe('TaskFactory', () => {
 
     beforeEach(() => {
         logger = new DefaultLogger();
-        taskFactory = new TaskFactory(logger);
 
+        // Create proper jest mocks
         mockLogger = {
             debug: jest.fn(),
             error: jest.fn()
@@ -27,15 +27,17 @@ describe('TaskFactory', () => {
 
         mockApiTaskExecutor = {
             execute: jest.fn()
-        } as any;
+        } as unknown as jest.Mocked<ApiTaskExecutor>;
 
         mockValidationService = {
             validateTask: jest.fn()
-        } as any;
+        } as unknown as jest.Mocked<TaskValidationService>;
 
+        // Mock the constructors
         (ApiTaskExecutor as jest.Mock).mockImplementation(() => mockApiTaskExecutor);
         (TaskValidationService as jest.Mock).mockImplementation(() => mockValidationService);
 
+        taskFactory = new TaskFactory(mockLogger);
         jest.clearAllMocks();
     });
 
@@ -43,6 +45,7 @@ describe('TaskFactory', () => {
         it('should return executor for supported task type', () => {
             const executor = taskFactory.getTaskExecutor(TaskType.API_CALL);
             expect(executor).toBeDefined();
+            expect(executor).toBe(mockApiTaskExecutor);
         });
 
         it('should return null for unsupported task type', () => {
@@ -71,11 +74,13 @@ describe('TaskFactory', () => {
                 data: { message: 'success' }
             };
 
+            mockValidationService.validateTask.mockImplementation(() => { });
             mockApiTaskExecutor.execute.mockResolvedValueOnce(mockOutput);
 
             const result = await taskFactory.executeTask(mockTask, mockContext);
 
             expect(result).toEqual({
+                task: mockTask,
                 taskId: mockTask.id,
                 success: true,
                 output: mockOutput,
@@ -83,9 +88,13 @@ describe('TaskFactory', () => {
                     contextData: mockContext.data
                 }
             });
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                'Starting task execution',
+                { taskId: mockTask.id, type: mockTask.type }
+            );
         });
 
-        it('should throw error for unsupported task type', async () => {
+        it('should handle unsupported task type', async () => {
             const mockTask = {
                 id: 'test-task',
                 name: 'Test Task',
@@ -95,65 +104,104 @@ describe('TaskFactory', () => {
             };
 
             const mockContext = { data: { test: 'value' } };
-            const validationError = new TaskError('Unsupported task type: unsupported');
 
-            await expect(taskFactory.executeTask(mockTask, mockContext)).rejects.toThrow(validationError);
+            const result = await taskFactory.executeTask(mockTask, mockContext);
+
+            expect(result).toEqual({
+                task: mockTask,
+                taskId: mockTask.id,
+                success: false,
+                error: `Unsupported task type: unsupported`,
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
+            expect(mockLogger.error).not.toHaveBeenCalled();
         });
 
-        it('should throw error when task execution fails', async () => {
-            const task = {
-                id: 'test-task',
-                name: 'Test Task',
-                type: TaskType.API_CALL,
-                order: 1,
-                config: {
-                    url: 'invalid-url'
-                }
-            };
-
+        it('should handle validation errors', async () => {
             const mockContext = { data: { test: 'value' } };
-            mockApiTaskExecutor.execute.mockRejectedValueOnce(new TaskError('Task execution failed'));
+            const validationError = new TaskError('Invalid task configuration');
 
-            await expect(taskFactory.executeTask(task, mockContext)).rejects.toThrow(TaskError);
-            await expect(taskFactory.executeTask(task, mockContext)).rejects.toThrow('Task execution failed');
+            mockValidationService.validateTask.mockImplementation(() => {
+                throw validationError;
+            });
+
+            const result = await taskFactory.executeTask(mockTask, mockContext);
+
+            expect(result).toEqual({
+                task: mockTask,
+                taskId: mockTask.id,
+                success: false,
+                error: 'Invalid task configuration',
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
+            expect(mockLogger.error).toHaveBeenCalledWith(
+                'Task execution failed',
+                {
+                    taskId: mockTask.id,
+                    type: mockTask.type,
+                    error: 'Invalid task configuration'
+                }
+            );
         });
 
         it('should handle task execution errors', async () => {
-            const mockTask = {
-                id: 'test-task',
-                name: 'Test Task',
-                type: TaskType.API_CALL,
-                order: 1,
-                config: {
-                    url: 'https://api.test.com',
-                    method: 'GET'
-                }
-            };
-
             const mockContext = { data: { test: 'value' } };
-            mockApiTaskExecutor.execute.mockRejectedValueOnce(new TaskError('Task execution failed'));
+            const executionError = new TaskError('Task execution failed');
 
-            await expect(taskFactory.executeTask(mockTask, mockContext)).rejects.toThrow(TaskError);
-            await expect(taskFactory.executeTask(mockTask, mockContext)).rejects.toThrow('Task execution failed');
+            mockValidationService.validateTask.mockImplementation(() => { });
+            mockApiTaskExecutor.execute.mockRejectedValueOnce(executionError);
+
+            const result = await taskFactory.executeTask(mockTask, mockContext);
+
+            expect(result).toEqual({
+                task: mockTask,
+                taskId: mockTask.id,
+                success: false,
+                error: 'Task execution failed',
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
+            expect(mockLogger.error).toHaveBeenCalledWith(
+                'Task execution failed',
+                {
+                    taskId: mockTask.id,
+                    type: mockTask.type,
+                    error: 'Task execution failed'
+                }
+            );
         });
 
         it('should handle unknown errors', async () => {
-            const mockTask = {
-                id: 'test-task',
-                name: 'Test Task',
-                type: TaskType.API_CALL,
-                order: 1,
-                config: {
-                    url: 'https://api.test.com',
-                    method: 'GET'
-                }
-            };
-
             const mockContext = { data: { test: 'value' } };
-            mockApiTaskExecutor.execute.mockRejectedValueOnce(new Error('Unknown error'));
+            const unknownError = new Error('Unknown error');
 
-            await expect(taskFactory.executeTask(mockTask, mockContext)).rejects.toThrow(TaskError);
-            await expect(taskFactory.executeTask(mockTask, mockContext)).rejects.toThrow('Unknown error');
+            mockValidationService.validateTask.mockImplementation(() => { });
+            mockApiTaskExecutor.execute.mockRejectedValueOnce(unknownError);
+
+            const result = await taskFactory.executeTask(mockTask, mockContext);
+
+            expect(result).toEqual({
+                task: mockTask,
+                taskId: mockTask.id,
+                success: false,
+                error: 'Unknown error',
+                metadata: {
+                    contextData: mockContext.data
+                }
+            });
+            expect(mockLogger.error).toHaveBeenCalledWith(
+                'Task execution failed',
+                {
+                    taskId: mockTask.id,
+                    type: mockTask.type,
+                    error: 'Unknown error'
+                }
+            );
         });
     });
 });

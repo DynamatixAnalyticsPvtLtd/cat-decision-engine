@@ -3,16 +3,30 @@ import { Workflow, Task } from './types';
 import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
 import { TaskExecutor } from './executors/task-executor';
 import { DefaultLogger } from './logging/default-logger';
+import { ValidationExecutor } from './executors/validation-executor';
+
+jest.mock('./executors/task-executor');
 
 describe('WorkflowEngine Context', () => {
     let workflowEngine: WorkflowEngine;
-    let taskExecutor: TaskExecutor;
+    let taskExecutor: jest.Mocked<TaskExecutor>;
+    let validationExecutor: jest.Mocked<ValidationExecutor>;
     let logger: DefaultLogger;
 
     beforeEach(() => {
         logger = new DefaultLogger();
-        taskExecutor = new TaskExecutor(logger);
-        workflowEngine = new WorkflowEngine();
+
+        // Create proper jest mocks
+        taskExecutor = {
+            execute: jest.fn(),
+            executeBatch: jest.fn()
+        } as unknown as jest.Mocked<TaskExecutor>;
+
+        validationExecutor = {
+            execute: jest.fn()
+        } as unknown as jest.Mocked<ValidationExecutor>;
+
+        workflowEngine = new WorkflowEngine(validationExecutor, taskExecutor, logger);
     });
 
     describe('execute', () => {
@@ -50,9 +64,15 @@ describe('WorkflowEngine Context', () => {
 
             const data = { test: 'value' };
 
+            // Mock validation executor
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
             // Mock task executor
-            jest.spyOn(taskExecutor, 'execute')
-                .mockImplementationOnce(async () => ({
+            taskExecutor.executeBatch.mockResolvedValueOnce([
+                {
                     task: task1,
                     taskId: task1.id,
                     success: true,
@@ -60,8 +80,8 @@ describe('WorkflowEngine Context', () => {
                     metadata: {
                         contextData: data
                     }
-                }))
-                .mockImplementationOnce(async () => ({
+                },
+                {
                     task: task2,
                     taskId: task2.id,
                     success: true,
@@ -69,7 +89,8 @@ describe('WorkflowEngine Context', () => {
                     metadata: {
                         contextData: data
                     }
-                }));
+                }
+            ]);
 
             const result = await workflowEngine.execute(workflow, data);
 
@@ -100,9 +121,7 @@ describe('WorkflowEngine Context', () => {
             });
 
             // Verify task execution order and context
-            expect(taskExecutor.execute).toHaveBeenCalledTimes(2);
-            expect(taskExecutor.execute).toHaveBeenNthCalledWith(1, task1, expect.any(Object));
-            expect(taskExecutor.execute).toHaveBeenNthCalledWith(2, task2, expect.any(Object));
+            expect(taskExecutor.executeBatch).toHaveBeenCalledWith([task1, task2], { data });
         });
 
         it('should handle context updates from tasks', async () => {
@@ -128,8 +147,14 @@ describe('WorkflowEngine Context', () => {
 
             const data = { test: 'value' };
 
+            // Mock validation executor
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
             // Mock task executor
-            jest.spyOn(taskExecutor, 'execute').mockImplementationOnce(async () => ({
+            taskExecutor.executeBatch.mockResolvedValueOnce([{
                 task,
                 taskId: task.id,
                 success: true,
@@ -137,7 +162,7 @@ describe('WorkflowEngine Context', () => {
                 metadata: {
                     contextData: data
                 }
-            }));
+            }]);
 
             const result = await workflowEngine.execute(workflow, data);
 
@@ -155,6 +180,8 @@ describe('WorkflowEngine Context', () => {
                     }
                 }]
             });
+
+            expect(taskExecutor.executeBatch).toHaveBeenCalledWith([task], { data });
         });
 
         it('should handle empty context', async () => {
@@ -168,6 +195,15 @@ describe('WorkflowEngine Context', () => {
 
             const data = {};
 
+            // Mock validation executor
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: true,
+                validationResults: []
+            });
+
+            // Mock task executor
+            taskExecutor.executeBatch.mockResolvedValueOnce([]);
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result).toEqual({
@@ -176,6 +212,8 @@ describe('WorkflowEngine Context', () => {
                 validationResults: [],
                 taskResults: []
             });
+
+            expect(taskExecutor.executeBatch).not.toHaveBeenCalled();
         });
     });
 });

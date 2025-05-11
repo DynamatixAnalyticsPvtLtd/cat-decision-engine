@@ -13,15 +13,8 @@ describe('WorkflowEngine Task Execution', () => {
     beforeEach(() => {
         logger = new DefaultLogger();
         taskExecutor = new TaskExecutor(logger) as jest.Mocked<TaskExecutor>;
-        taskExecutor.execute = jest.fn().mockImplementation(async (task: Task, context: { data: any }) => ({
-            task,
-            taskId: task.id,
-            success: true,
-            output: { result: 'success' },
-            metadata: {
-                contextData: context.data
-            }
-        }));
+        taskExecutor.execute = jest.fn();
+        taskExecutor.executeBatch = jest.fn();
         workflowEngine = new WorkflowEngine(undefined, taskExecutor, logger);
     });
 
@@ -51,6 +44,17 @@ describe('WorkflowEngine Task Execution', () => {
             };
 
             const data = { test: 'value' };
+            const mockResult: TaskResult = {
+                task,
+                taskId: task.id,
+                success: true,
+                output: { result: 'success' },
+                metadata: {
+                    contextData: data
+                }
+            };
+            taskExecutor.executeBatch.mockResolvedValueOnce([mockResult]);
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(true);
@@ -63,7 +67,7 @@ describe('WorkflowEngine Task Execution', () => {
                     contextData: data
                 }
             });
-            expect(taskExecutor.execute).toHaveBeenCalledWith(task, { data });
+            expect(taskExecutor.executeBatch).toHaveBeenCalledWith([task], { data });
         });
 
         it('should execute multiple tasks in order', async () => {
@@ -98,25 +102,40 @@ describe('WorkflowEngine Task Execution', () => {
             };
 
             const data = { test: 'value' };
+            const mockResults: TaskResult[] = [
+                {
+                    task: task1,
+                    taskId: task1.id,
+                    success: true,
+                    output: { result: 'success' },
+                    metadata: { contextData: data }
+                },
+                {
+                    task: task2,
+                    taskId: task2.id,
+                    success: true,
+                    output: { result: 'success' },
+                    metadata: { contextData: data }
+                }
+            ];
+            taskExecutor.executeBatch.mockResolvedValueOnce(mockResults);
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(true);
             expect(result.taskResults).toHaveLength(2);
             expect(result.taskResults[0].taskId).toBe('task-1');
             expect(result.taskResults[1].taskId).toBe('task-2');
-            expect(taskExecutor.execute).toHaveBeenCalledTimes(2);
-            expect(taskExecutor.execute).toHaveBeenNthCalledWith(1, task1, { data });
-            expect(taskExecutor.execute).toHaveBeenNthCalledWith(2, task2, { data });
+            expect(taskExecutor.executeBatch).toHaveBeenCalledWith([task1, task2], { data });
         });
 
         it('should stop execution on task failure', async () => {
-            taskExecutor.execute.mockRejectedValueOnce(new Error('API call failed'));
-
             const task1: Task = {
                 id: 'task-1',
                 type: TaskType.API_CALL,
                 name: 'Test Task 1',
                 order: 1,
+                onError: 'stop',
                 config: {
                     url: 'https://api.test.com/1',
                     method: TaskMethod.GET
@@ -143,16 +162,27 @@ describe('WorkflowEngine Task Execution', () => {
             };
 
             const data = { test: 'value' };
+            const mockResults: TaskResult[] = [
+                {
+                    task: task1,
+                    taskId: task1.id,
+                    success: false,
+                    error: 'API call failed',
+                    metadata: { contextData: data }
+                }
+            ];
+            taskExecutor.executeBatch.mockResolvedValueOnce(mockResults);
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(false);
             expect(result.taskResults).toHaveLength(1);
             expect(result.taskResults[0].success).toBe(false);
             expect(result.taskResults[0].error).toBe('API call failed');
-            expect(taskExecutor.execute).toHaveBeenCalledTimes(1);
+            expect(taskExecutor.executeBatch).toHaveBeenCalledWith([task1, task2], { data });
         });
 
-        it('should handle task with dependencies', async () => {
+        it('should execute tasks in order regardless of array order', async () => {
             const task1: Task = {
                 id: 'task-1',
                 type: TaskType.API_CALL,
@@ -171,29 +201,45 @@ describe('WorkflowEngine Task Execution', () => {
                 order: 2,
                 config: {
                     url: 'https://api.test.com/2',
-                    method: TaskMethod.GET,
-                    dependencies: ['task-1']
+                    method: TaskMethod.GET
                 }
             };
 
+            // Note: tasks are added in reverse order
             const workflow = {
                 id: 'test-workflow',
                 name: 'Test Workflow',
                 trigger: 'test',
                 validations: [],
-                tasks: [task1, task2]
+                tasks: [task2, task1]
             };
 
             const data = { test: 'value' };
+            const mockResults: TaskResult[] = [
+                {
+                    task: task1,
+                    taskId: task1.id,
+                    success: true,
+                    output: { result: 'success' },
+                    metadata: { contextData: data }
+                },
+                {
+                    task: task2,
+                    taskId: task2.id,
+                    success: true,
+                    output: { result: 'success' },
+                    metadata: { contextData: data }
+                }
+            ];
+            taskExecutor.executeBatch.mockResolvedValueOnce(mockResults);
+
             const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(true);
             expect(result.taskResults).toHaveLength(2);
             expect(result.taskResults[0].taskId).toBe('task-1');
             expect(result.taskResults[1].taskId).toBe('task-2');
-            expect(taskExecutor.execute).toHaveBeenCalledTimes(2);
-            expect(taskExecutor.execute).toHaveBeenNthCalledWith(1, task1, { data });
-            expect(taskExecutor.execute).toHaveBeenNthCalledWith(2, task2, { data });
+            expect(taskExecutor.executeBatch).toHaveBeenCalledWith([task2, task1], { data });
         });
     });
 });
