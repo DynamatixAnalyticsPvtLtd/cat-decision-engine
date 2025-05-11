@@ -11,6 +11,7 @@ import { ValidationResultItem } from './types/validation-result';
 import { TaskResult } from './types/task-result';
 import { Task } from './types/task';
 import { MongoLogger } from './logging/mongo-logger';
+import { v4 as uuidv4 } from 'uuid';
 
 export class WorkflowEngine {
     private readonly logger: ILogger;
@@ -36,8 +37,22 @@ export class WorkflowEngine {
             throw new WorkflowError('Workflow is required', 'VALIDATION_ERROR');
         }
 
+        const executionId = uuidv4();
+        let result: WorkflowResult = {
+            success: false,
+            context: { data },
+            validationResults: [],
+            taskResults: [],
+            executionId
+        };
+
         try {
-            await this.logger.info(`Starting workflow execution: ${workflow.id}`, { workflow, data });
+            await this.logger.info(`Starting workflow execution: ${workflow.id}`, {
+                workflow,
+                data,
+                executionId,
+                status: 'started'
+            });
 
             const context: WorkflowContext = { data };
             const validationResults: ValidationResultItem[] = [];
@@ -47,13 +62,22 @@ export class WorkflowEngine {
             const validationResult = await this.validationExecutor.execute(workflow.validations, data);
             validationResults.push(...validationResult.validationResults);
             if (!validationResult.success) {
-                return {
+                result = {
                     success: false,
                     context,
                     validationResults,
                     taskResults,
-                    error: 'Validation failed'
+                    error: 'Validation failed',
+                    executionId
                 };
+                await this.logger.error(`Workflow validation failed: ${workflow.id}`, {
+                    error: 'Validation failed',
+                    status: 'failed',
+                    validationResults,
+                    taskResults,
+                    executionId
+                });
+                return result;
             }
 
             // Execute tasks using TaskExecutor
@@ -62,29 +86,51 @@ export class WorkflowEngine {
                 if (taskResult) {
                     taskResults.push(...taskResult);
                     if (taskResult.some(result => !result.success)) {
-                        return {
+                        result = {
                             success: false,
                             context,
                             validationResults,
                             taskResults,
-                            error: 'Task execution failed'
+                            error: 'Task execution failed',
+                            executionId
                         };
+                        await this.logger.error(`Workflow task execution failed: ${workflow.id}`, {
+                            error: 'Task execution failed',
+                            status: 'failed',
+                            validationResults,
+                            taskResults,
+                            executionId
+                        });
+                        return result;
                     }
                 }
             }
 
-            const result: WorkflowResult = {
+            result = {
                 success: true,
                 context,
                 validationResults,
-                taskResults
+                taskResults,
+                executionId
             };
 
-            await this.logger.info(`Workflow completed successfully: ${workflow.id}`, { result });
+            await this.logger.info(`Workflow completed successfully: ${workflow.id}`, {
+                result,
+                status: 'completed',
+                validationResults,
+                taskResults,
+                executionId
+            });
             return result;
 
         } catch (error) {
-            await this.logger.error(`Workflow execution failed: ${workflow.id}`, { error });
+            await this.logger.error(`Workflow execution failed: ${workflow.id}`, {
+                error,
+                status: 'failed',
+                validationResults: result?.validationResults || [],
+                taskResults: result?.taskResults || [],
+                executionId
+            });
             throw error instanceof WorkflowError ? error : new WorkflowError(
                 error instanceof Error ? error.message : 'Workflow execution failed',
                 'WORKFLOW_ERROR'

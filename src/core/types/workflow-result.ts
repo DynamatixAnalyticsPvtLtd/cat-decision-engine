@@ -8,4 +8,5 @@ export interface WorkflowResult {
     validationResults: ValidationResultItem[];
     taskResults: TaskResult[];
     error?: string;
+    executionId: string;
 } 

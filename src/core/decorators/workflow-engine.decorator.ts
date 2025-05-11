@@ -4,6 +4,7 @@ import { ILogger } from 'core/logging/logger.interface';
 import { ValidationExecutor } from '../executors/validation-executor';
 import { ValidationResultItem } from '../types/validation-result';
 import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Base decorator class for WorkflowEngine
@@ -63,22 +64,6 @@ export class ValidationWorkflowEngineDecorator extends WorkflowEngineDecorator {
     }
 
     async execute(workflow: Workflow, data: any): Promise<WorkflowResult> {
-        if (!workflow.validations || workflow.validations.length === 0) {
-            return super.execute(workflow, data);
-        }
-
-        const validationResult = await this.validationExecutor.execute(workflow.validations, data);
-
-        if (!validationResult.success) {
-            const failedValidations = validationResult.validationResults.filter(v => !v.success);
-            return {
-                success: false,
-                context: { data },
-                validationResults: validationResult.validationResults,
-                taskResults: [],
-                error: failedValidations.map(v => v.message).join(', ')
-            };
-        }
 
         return super.execute(workflow, data);
     }
@@ -104,9 +89,12 @@ export class ErrorHandlingWorkflowEngineDecorator extends WorkflowEngineDecorato
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
 
+            // Create a new workflow without validations to get the execution ID
+            const workflowWithoutValidations = { ...workflow, validations: [] };
+            const engineResult = await super.execute(workflowWithoutValidations, data);
             return {
+                ...engineResult,
                 success: false,
-                context: { data },
                 validationResults: [],
                 taskResults: [],
                 error: error instanceof Error ? error.message : 'Unknown error'

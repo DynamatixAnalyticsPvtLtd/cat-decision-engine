@@ -1,7 +1,6 @@
 import { loanApprovalWorkflow, applicationData } from './loan-approval-workflow';
 import { DefaultLogger } from '../core/logging/default-logger';
 import { ValidationExecutor } from '../core/executors/validation-executor';
-import { createDecoratedWorkflowEngine } from '../core/decorators/workflow-engine.decorator';
 import { MongoClient } from 'mongodb';
 import { MongoLogger } from '../core/logging/mongo-logger';
 import { ILogger } from 'core/logging/logger.interface';
@@ -63,7 +62,10 @@ describe('Loan Approval Workflow', () => {
         });
 
         // Verify logs for this workflow run
-        const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+        const logs = await mongoClient.db(dbName).collection(collectionName).find({
+            workflowId: 'loan-approval',
+            executionId: result.executionId
+        }).toArray();
         expect(logs.length).toBeGreaterThan(0);
     });
 
@@ -86,7 +88,10 @@ describe('Loan Approval Workflow', () => {
         expect(result.taskResults).toHaveLength(0);
 
         // Verify logs for this workflow run
-        const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+        const logs = await mongoClient.db(dbName).collection(collectionName).find({
+            workflowId: 'loan-approval',
+            executionId: result.executionId
+        }).toArray();
         expect(logs.length).toBeGreaterThan(0);
     });
 
@@ -109,7 +114,10 @@ describe('Loan Approval Workflow', () => {
         expect(result.taskResults).toHaveLength(0);
 
         // Verify logs for this workflow run
-        const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+        const logs = await mongoClient.db(dbName).collection(collectionName).find({
+            workflowId: 'loan-approval',
+            executionId: result.executionId
+        }).toArray();
         expect(logs.length).toBeGreaterThan(0);
     });
 
@@ -134,19 +142,86 @@ describe('Loan Approval Workflow', () => {
             expect(result.taskResults[2].success).toBe(true);
 
             // Verify logs for this workflow run
-            const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+            const logs = await mongoClient.db(dbName).collection(collectionName).find({
+                workflowId: 'loan-approval',
+                executionId: result.executionId
+            }).toArray();
             expect(logs.length).toBeGreaterThan(0);
         } finally {
             // Restore the original tasks
             loanApprovalWorkflow.tasks = originalTasks;
         }
     });
+
+    it('should store validation and task results in logs', async () => {
+        // Ensure we're using the original workflow with valid URLs
+        loanApprovalWorkflow.tasks = loanApprovalWorkflow.tasks.map(task => ({
+            ...task,
+            config: {
+                ...task.config,
+                url: `https://jsonplaceholder.typicode.com/posts/${task.id === 'check-credit-history' ? '1' : task.id === 'calculate-risk-score' ? '2' : '3'}`
+            }
+        }));
+
+        // Process the application
+        const result = await processLoanApplication(applicationData, logger);
+
+        // Verify the result
+        expect(result.success).toBe(true);
+        expect(result.validationResults).toHaveLength(3);
+        expect(result.taskResults).toHaveLength(3);
+        expect(result.executionId).toBeDefined();
+
+        // Add a delay to ensure all logs are written
+        await new Promise(res => setTimeout(res, 1000));
+        // Query logs for this executionId only
+        const logs = await mongoClient.db(dbName).collection(collectionName).find({
+            executionId: result.executionId
+        }).toArray();
+        console.log('DEBUG: logs for executionId', result.executionId, JSON.stringify(logs, null, 2));
+        expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and completed/failed
+        expect(logs.some(log => log.status === 'started')).toBe(true);
+        expect(logs.some(log => log.status === 'completed')).toBe(true);
+
+        // Find the completion log entry
+        const completionLog = logs.find(log => log.status === 'completed');
+        expect(completionLog).toBeDefined();
+
+        if (!completionLog) {
+            throw new Error('Completion log not found');
+        }
+
+        // Verify validation results in log
+        expect(completionLog.validationResults).toBeDefined();
+        expect(completionLog.validationResults).toHaveLength(3);
+        completionLog.validationResults.forEach((vr: { rule: any; success: boolean; message: string }) => {
+            expect(vr).toHaveProperty('rule');
+            expect(vr).toHaveProperty('success');
+            expect(vr).toHaveProperty('message');
+        });
+
+        // Verify task results in log
+        expect(completionLog.taskResults).toBeDefined();
+        expect(completionLog.taskResults).toHaveLength(3);
+        completionLog.taskResults.forEach((tr: { taskId: string; success: boolean; output: any }) => {
+            expect(tr).toHaveProperty('taskId');
+            expect(tr).toHaveProperty('success');
+            expect(tr).toHaveProperty('output');
+        });
+
+        // Verify specific task results
+        completionLog.taskResults.forEach((tr: { success: boolean; output: { statusCode: number; headers: any; data: { id: number } } }, index: number) => {
+            expect(tr.success).toBe(true);
+            expect(tr.output).toHaveProperty('statusCode', 200);
+            expect(tr.output).toHaveProperty('headers');
+            expect(tr.output).toHaveProperty('data');
+            expect(tr.output.data).toHaveProperty('id', index + 1);
+        });
+    });
 });
 
 async function processLoanApplication(data: any, loggerOverride?: ILogger) {
     const logger = loggerOverride || new DefaultLogger();
-    const validationExecutor = new ValidationExecutor(logger);
-    const baseEngine = new WorkflowEngine();
-    const workflowEngine = createDecoratedWorkflowEngine(baseEngine, logger, validationExecutor);
+    const workflowEngine = new WorkflowEngine(undefined, undefined, logger);
     return workflowEngine.execute(loanApprovalWorkflow, data);
 } 
