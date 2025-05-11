@@ -45,7 +45,7 @@ export class ValidationExecutor {
 
     private async evaluateCondition(condition: string, data: any): Promise<boolean> {
         try {
-            // Create a function from the condition string
+            // Create a function from the condition string using only 'data'
             const fn = new Function('data', `return ${condition}`);
             const result = fn(data);
             return typeof result === 'boolean' ? result : false;

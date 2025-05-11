@@ -20,7 +20,10 @@ export class TaskExecutor implements ITaskExecutor {
         try {
             await this.logger.debug('Starting task execution', {
                 taskId: task.id,
-                type: task.type
+                type: task.type,
+                workflowId: context.workflowId,
+                workflowName: context.workflowName,
+                executionId: context.executionId
             });
 
             const executor = this.taskFactory.getTaskExecutor(task.type);
@@ -50,6 +53,9 @@ export class TaskExecutor implements ITaskExecutor {
             await this.logger.error('Task execution failed', {
                 taskId: task.id,
                 type: task.type,
+                workflowId: context.workflowId,
+                workflowName: context.workflowName,
+                executionId: context.executionId,
                 error: error instanceof Error ? error.message : String(error)
             });
 
@@ -80,7 +86,10 @@ export class TaskExecutor implements ITaskExecutor {
             try {
                 await this.logger.debug('Starting task execution', {
                     taskId: task.id,
-                    type: task.type
+                    type: task.type,
+                    workflowId: context.workflowId,
+                    workflowName: context.workflowName,
+                    executionId: context.executionId
                 });
 
                 const executor = this.taskFactory.getTaskExecutor(task.type);
@@ -110,6 +119,9 @@ export class TaskExecutor implements ITaskExecutor {
                 await this.logger.error('Task execution failed', {
                     taskId: task.id,
                     type: task.type,
+                    workflowId: context.workflowId,
+                    workflowName: context.workflowName,
+                    executionId: context.executionId,
                     error: error instanceof Error ? error.message : String(error)
                 });
 

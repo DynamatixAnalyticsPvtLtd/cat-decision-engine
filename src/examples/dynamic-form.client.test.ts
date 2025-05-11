@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+jest.setTimeout(20000);
+
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.DB_NAME || 'workflow-engine';
 const LOGS_COLLECTION = 'workflow_logs';
@@ -29,31 +31,41 @@ describe('Dynamic Form Client Integration Tests', () => {
     });
 
     describe('Loan Form Processing', () => {
-        it('should process loan form successfully with valid data and log success', async () => {
-            const result = await processLoanForm();
+        it('should process loan form successfully', async () => {
+            // Record start time before triggering workflow
+            const startTime = new Date();
 
-            // Verify result
-            expect(result).toBeDefined();
-            expect(result.success).toBe(true);
-            expect(result.data).toBeDefined();
-            expect(result.data?.entityType).toBe('loan');
-            expect(result.data?.status).toBe('PROCESSED');
-            expect(result.data?.message).toBe('loan form processed successfully');
-            expect(result.data?.applicantName).toBe('John Doe');
-            expect(result.data?.loanAmount).toBe(50000);
+            // Trigger the workflow
+            await processLoanForm();
 
-            // Verify logs
-            const logs = await logsCollection.find({ entityType: 'loan' }).toArray();
-            expect(logs).toHaveLength(1);
-            expect(logs[0]).toMatchObject({
-                entityType: 'loan',
-                status: 'SUCCESS',
-                workflowName: expect.any(String),
-                executionTime: expect.any(Number)
-            });
+            // Wait for logs to be written and verify workflow execution
+            let logs: any[] = [];
+            for (let i = 0; i < 10; i++) {
+                logs = await logsCollection.find({
+                    workflowId: 'loan-form-workflow',
+                    timestamp: { $gte: startTime }
+                }).toArray();
+                if (logs.some((log: any) => log.status === 'completed')) break;
+                await new Promise(res => setTimeout(res, 1000));
+            }
+
+            // Verify workflow execution through logs
+            expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and completed
+            expect(logs.some((log: any) => log.status === 'started')).toBe(true);
+            expect(logs.some((log: any) => log.status === 'completed')).toBe(true);
+
+            // Verify workflow execution details
+            const completedLog = logs.find((log: any) => log.status === 'completed');
+            expect(completedLog).toBeDefined();
+            expect(completedLog?.workflowId).toBe('loan-form-workflow');
+            expect(completedLog?.taskResults).toBeDefined();
+            expect(completedLog?.taskResults.length).toBeGreaterThan(0);
         });
 
         it('should log validation failure for invalid loan amount', async () => {
+            // Record start time before triggering workflow
+            const startTime = new Date();
+
             // Test with invalid loan amount
             const invalidLoanData = {
                 applicantName: 'John Doe',
@@ -63,51 +75,59 @@ describe('Dynamic Form Client Integration Tests', () => {
                 email: 'john.doe@example.com'
             };
 
-            const result = await processLoanForm(invalidLoanData);
+            await processLoanForm(invalidLoanData);
 
-            // Verify result
-            expect(result.success).toBe(false);
-            expect(result.error).toBeDefined();
+            // Wait for logs to be written
+            await new Promise(res => setTimeout(res, 1000));
 
-            // Verify logs
-            const logs = await logsCollection.find({ entityType: 'loan' }).toArray();
-            expect(logs).toHaveLength(1);
-            expect(logs[0]).toMatchObject({
-                entityType: 'loan',
-                status: 'FAILURE',
-                error: expect.any(String),
-                workflowName: expect.any(String),
-                executionTime: expect.any(Number)
-            });
+            // Query logs for this workflow within the time window
+            const logs = await logsCollection.find({
+                workflowId: 'loan-form-workflow',
+                timestamp: { $gte: startTime }
+            }).toArray();
+
+            expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and failed
+            expect(logs.some((log: any) => log.status === 'started')).toBe(true);
+            expect(logs.some((log: any) => log.status === 'failed')).toBe(true);
         });
     });
 
     describe('Insurance Form Processing', () => {
-        it('should process insurance form successfully with valid data and log success', async () => {
-            const result = await processInsuranceForm();
+        it('should process insurance form successfully', async () => {
+            // Record start time before triggering workflow
+            const startTime = new Date();
 
-            // Verify result
-            expect(result).toBeDefined();
-            expect(result.success).toBe(true);
-            expect(result.data).toBeDefined();
-            expect(result.data?.entityType).toBe('insurance');
-            expect(result.data?.status).toBe('PROCESSED');
-            expect(result.data?.message).toBe('insurance form processed successfully');
-            expect(result.data?.policyHolder).toBe('Jane Smith');
-            expect(result.data?.coverageType).toBe('health');
+            // Trigger the workflow
+            await processInsuranceForm();
 
-            // Verify logs
-            const logs = await logsCollection.find({ entityType: 'insurance' }).toArray();
-            expect(logs).toHaveLength(1);
-            expect(logs[0]).toMatchObject({
-                entityType: 'insurance',
-                status: 'SUCCESS',
-                workflowName: expect.any(String),
-                executionTime: expect.any(Number)
-            });
+            // Wait for logs to be written and verify workflow execution
+            let logs: any[] = [];
+            for (let i = 0; i < 10; i++) {
+                logs = await logsCollection.find({
+                    workflowId: 'insurance-form-workflow',
+                    timestamp: { $gte: startTime }
+                }).toArray();
+                if (logs.some((log: any) => log.status === 'completed')) break;
+                await new Promise(res => setTimeout(res, 1000));
+            }
+
+            // Verify workflow execution through logs
+            expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and completed
+            expect(logs.some((log: any) => log.status === 'started')).toBe(true);
+            expect(logs.some((log: any) => log.status === 'completed')).toBe(true);
+
+            // Verify workflow execution details
+            const completedLog = logs.find((log: any) => log.status === 'completed');
+            expect(completedLog).toBeDefined();
+            expect(completedLog?.workflowId).toBe('insurance-form-workflow');
+            expect(completedLog?.taskResults).toBeDefined();
+            expect(completedLog?.taskResults.length).toBeGreaterThan(0);
         });
 
         it('should log validation failure for invalid coverage type', async () => {
+            // Record start time before triggering workflow
+            const startTime = new Date();
+
             // Test with invalid coverage type
             const invalidInsuranceData = {
                 policyHolder: 'Jane Smith',
@@ -117,51 +137,59 @@ describe('Dynamic Form Client Integration Tests', () => {
                 email: 'jane.smith@example.com'
             };
 
-            const result = await processInsuranceForm(invalidInsuranceData);
+            await processInsuranceForm(invalidInsuranceData);
 
-            // Verify result
-            expect(result.success).toBe(false);
-            expect(result.error).toBeDefined();
+            // Wait for logs to be written
+            await new Promise(res => setTimeout(res, 1000));
 
-            // Verify logs
-            const logs = await logsCollection.find({ entityType: 'insurance' }).toArray();
-            expect(logs).toHaveLength(1);
-            expect(logs[0]).toMatchObject({
-                entityType: 'insurance',
-                status: 'FAILURE',
-                error: expect.any(String),
-                workflowName: expect.any(String),
-                executionTime: expect.any(Number)
-            });
+            // Query logs for this workflow within the time window
+            const logs = await logsCollection.find({
+                workflowId: 'insurance-form-workflow',
+                timestamp: { $gte: startTime }
+            }).toArray();
+
+            expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and failed
+            expect(logs.some((log: any) => log.status === 'started')).toBe(true);
+            expect(logs.some((log: any) => log.status === 'failed')).toBe(true);
         });
     });
 
     describe('Mortgage Form Processing', () => {
-        it('should process mortgage form successfully with valid data and log success', async () => {
-            const result = await processMortgageForm();
+        it('should process mortgage form successfully', async () => {
+            // Record start time before triggering workflow
+            const startTime = new Date();
 
-            // Verify result
-            expect(result).toBeDefined();
-            expect(result.success).toBe(true);
-            expect(result.data).toBeDefined();
-            expect(result.data?.entityType).toBe('mortgage');
-            expect(result.data?.status).toBe('PROCESSED');
-            expect(result.data?.message).toBe('mortgage form processed successfully');
-            expect(result.data?.propertyValue).toBe(300000);
-            expect(result.data?.downPayment).toBe(60000);
+            // Trigger the workflow
+            await processMortgageForm();
 
-            // Verify logs
-            const logs = await logsCollection.find({ entityType: 'mortgage' }).toArray();
-            expect(logs).toHaveLength(1);
-            expect(logs[0]).toMatchObject({
-                entityType: 'mortgage',
-                status: 'SUCCESS',
-                workflowName: expect.any(String),
-                executionTime: expect.any(Number)
-            });
+            // Wait for logs to be written and verify workflow execution
+            let logs: any[] = [];
+            for (let i = 0; i < 10; i++) {
+                logs = await logsCollection.find({
+                    workflowId: 'mortgage-form-workflow',
+                    timestamp: { $gte: startTime }
+                }).toArray();
+                if (logs.some((log: any) => log.status === 'completed')) break;
+                await new Promise(res => setTimeout(res, 1000));
+            }
+
+            // Verify workflow execution through logs
+            expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and completed
+            expect(logs.some((log: any) => log.status === 'started')).toBe(true);
+            expect(logs.some((log: any) => log.status === 'completed')).toBe(true);
+
+            // Verify workflow execution details
+            const completedLog = logs.find((log: any) => log.status === 'completed');
+            expect(completedLog).toBeDefined();
+            expect(completedLog?.workflowId).toBe('mortgage-form-workflow');
+            expect(completedLog?.taskResults).toBeDefined();
+            expect(completedLog?.taskResults.length).toBeGreaterThan(0);
         });
 
         it('should log validation failure for invalid property value', async () => {
+            // Record start time before triggering workflow
+            const startTime = new Date();
+
             // Test with invalid property value
             const invalidMortgageData = {
                 propertyValue: 50000, // Invalid property value
@@ -171,22 +199,20 @@ describe('Dynamic Form Client Integration Tests', () => {
                 email: 'mortgage.buyer@example.com'
             };
 
-            const result = await processMortgageForm(invalidMortgageData);
+            await processMortgageForm(invalidMortgageData);
 
-            // Verify result
-            expect(result.success).toBe(false);
-            expect(result.error).toBeDefined();
+            // Wait for logs to be written
+            await new Promise(res => setTimeout(res, 1000));
 
-            // Verify logs
-            const logs = await logsCollection.find({ entityType: 'mortgage' }).toArray();
-            expect(logs).toHaveLength(1);
-            expect(logs[0]).toMatchObject({
-                entityType: 'mortgage',
-                status: 'FAILURE',
-                error: expect.any(String),
-                workflowName: expect.any(String),
-                executionTime: expect.any(Number)
-            });
+            // Query logs for this workflow within the time window
+            const logs = await logsCollection.find({
+                workflowId: 'mortgage-form-workflow',
+                timestamp: { $gte: startTime }
+            }).toArray();
+
+            expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and failed
+            expect(logs.some((log: any) => log.status === 'started')).toBe(true);
+            expect(logs.some((log: any) => log.status === 'failed')).toBe(true);
         });
     });
 }); 

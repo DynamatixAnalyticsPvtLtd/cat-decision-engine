@@ -50,7 +50,8 @@ describe('WorkflowEngine Decorators', () => {
                 success: true,
                 context: { data },
                 validationResults: [],
-                taskResults: []
+                taskResults: [],
+                executionId: 'test-execution-id'
             };
 
             mockWorkflowEngine.execute.mockResolvedValueOnce(successResult);
@@ -77,7 +78,8 @@ describe('WorkflowEngine Decorators', () => {
                 success: true,
                 context: { data },
                 validationResults: [],
-                taskResults: []
+                taskResults: [],
+                executionId: 'test-execution-id'
             };
 
             mockWorkflowEngine.execute.mockResolvedValueOnce(successResult);
@@ -126,7 +128,8 @@ describe('WorkflowEngine Decorators', () => {
                 success: true,
                 context: { data },
                 validationResults: [],
-                taskResults: []
+                taskResults: [],
+                executionId: 'test-execution-id'
             };
 
             mockWorkflowEngine.execute.mockResolvedValueOnce(successResult);
@@ -153,6 +156,7 @@ describe('WorkflowEngine Decorators', () => {
             expect(result.taskResults).toHaveLength(0);
             expect(result.validationResults).toHaveLength(0);
             expect(result.context).toEqual({ data });
+            expect(result.executionId).toBeDefined();
         });
 
         it('should handle non-Error objects', async () => {
@@ -166,6 +170,7 @@ describe('WorkflowEngine Decorators', () => {
             expect(result.taskResults).toHaveLength(0);
             expect(result.validationResults).toHaveLength(0);
             expect(result.context).toEqual({ data });
+            expect(result.executionId).toBeDefined();
         });
     });
 
@@ -175,7 +180,8 @@ describe('WorkflowEngine Decorators', () => {
                 success: true,
                 context: { data },
                 validationResults: [],
-                taskResults: []
+                taskResults: [],
+                executionId: 'test-execution-id'
             };
 
             mockWorkflowEngine.execute.mockResolvedValueOnce(successResult);
@@ -199,6 +205,7 @@ describe('WorkflowEngine Decorators', () => {
             expect(result.taskResults).toHaveLength(0);
             expect(result.validationResults).toHaveLength(0);
             expect(result.context).toEqual({ data });
+            expect(result.executionId).toBeDefined();
         });
 
         it('should handle validation failures through all decorators', async () => {

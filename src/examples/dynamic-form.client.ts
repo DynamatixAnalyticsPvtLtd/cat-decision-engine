@@ -20,7 +20,10 @@ export async function processLoanForm(testData?: any): Promise<FormResponse> {
     };
 
     if (loanData.loanAmount < 10000) {
-        throw new Error('Loan amount must be at least $10,000');
+        return {
+            success: false,
+            error: 'Loan amount must be at least $10,000'
+        };
     }
 
     return handleFormSubmission('loan', loanData);
@@ -36,7 +39,10 @@ export async function processInsuranceForm(testData?: any): Promise<FormResponse
     };
 
     if (!['health', 'life', 'auto'].includes(insuranceData.coverageType)) {
-        throw new Error('Invalid coverage type');
+        return {
+            success: false,
+            error: 'Invalid coverage type'
+        };
     }
 
     return handleFormSubmission('insurance', insuranceData);
@@ -52,7 +58,10 @@ export async function processMortgageForm(testData?: any): Promise<FormResponse>
     };
 
     if (mortgageData.propertyValue < 100000) {
-        throw new Error('Property value must be at least $100,000');
+        return {
+            success: false,
+            error: 'Property value must be at least $100,000'
+        };
     }
 
     return handleFormSubmission('mortgage', mortgageData);
@@ -67,8 +76,11 @@ export async function handleFormSubmission(entityType: string, formData: any) {
         // Process the form
         const result = await formHandler.processForm(formData);
 
-        // The workflow engine result is already in the correct format
-        return result;
+        // Ensure result is always in the correct format
+        return {
+            success: true,
+            data: result.data
+        };
 
     } catch (error) {
         return {

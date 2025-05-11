@@ -57,11 +57,8 @@ async function initWorkflows() {
                         type: TaskType.API_CALL,
                         order: 1,
                         config: {
-                            url: 'https://api.credit-check.com/score',
+                            url: 'https://jsonplaceholder.typicode.com/posts/1',
                             method: TaskMethod.GET,
-                            headers: {
-                                'Authorization': 'Bearer ${CREDIT_CHECK_API_KEY}'
-                            },
                             timeout: 5000,
                             retries: 3,
                             retryStrategy: TaskRetryStrategy.EXPONENTIAL,
@@ -74,7 +71,7 @@ async function initWorkflows() {
                         type: TaskType.API_CALL,
                         order: 2,
                         config: {
-                            url: 'https://api.risk-assessment.com/calculate',
+                            url: 'https://jsonplaceholder.typicode.com/posts',
                             method: TaskMethod.POST,
                             headers: {
                                 'Content-Type': 'application/json'
@@ -82,48 +79,11 @@ async function initWorkflows() {
                             body: {
                                 loanAmount: '${data.loanAmount}',
                                 annualIncome: '${data.annualIncome}',
-                                creditScore: '${credit-check.result.score}'
+                                creditScore: '${credit-check.result.id}'
                             },
                             timeout: 5000,
                             retries: 2,
                             priority: TaskPriority.MEDIUM
-                        }
-                    },
-                    {
-                        id: 'loan-approval',
-                        name: 'Loan Approval Decision',
-                        type: TaskType.CONDITIONAL,
-                        order: 3,
-                        config: {
-                            condition: 'risk-assessment.result.riskScore < 0.7',
-                            onTrue: [
-                                {
-                                    id: 'send-approval-email',
-                                    name: 'Send Approval Email',
-                                    type: TaskType.EMAIL_SEND,
-                                    order: 1,
-                                    config: {
-                                        to: ['${data.email}'],
-                                        subject: 'Loan Application Approved',
-                                        body: 'Your loan application has been approved.',
-                                        timeout: 3000
-                                    }
-                                }
-                            ],
-                            onFalse: [
-                                {
-                                    id: 'send-rejection-email',
-                                    name: 'Send Rejection Email',
-                                    type: TaskType.EMAIL_SEND,
-                                    order: 1,
-                                    config: {
-                                        to: ['${data.email}'],
-                                        subject: 'Loan Application Status',
-                                        body: 'Your loan application requires further review.',
-                                        timeout: 3000
-                                    }
-                                }
-                            ]
                         }
                     }
                 ]
@@ -156,11 +116,8 @@ async function initWorkflows() {
                         type: TaskType.API_CALL,
                         order: 1,
                         config: {
-                            url: 'https://api.medical-records.com/history',
+                            url: 'https://jsonplaceholder.typicode.com/posts/2',
                             method: TaskMethod.GET,
-                            headers: {
-                                'Authorization': 'Bearer ${MEDICAL_API_KEY}'
-                            },
                             timeout: 5000,
                             retries: 3,
                             priority: TaskPriority.HIGH
@@ -172,7 +129,7 @@ async function initWorkflows() {
                         type: TaskType.API_CALL,
                         order: 2,
                         config: {
-                            url: 'https://api.insurance-premium.com/calculate',
+                            url: 'https://jsonplaceholder.typicode.com/posts',
                             method: TaskMethod.POST,
                             headers: {
                                 'Content-Type': 'application/json'
@@ -180,26 +137,11 @@ async function initWorkflows() {
                             body: {
                                 coverageType: '${data.coverageType}',
                                 age: '${data.age}',
-                                medicalHistory: '${medical-check.result.history}'
+                                medicalHistory: '${medical-check.result.id}'
                             },
                             timeout: 5000,
                             retries: 2,
                             priority: TaskPriority.MEDIUM
-                        }
-                    },
-                    {
-                        id: 'policy-generation',
-                        name: 'Policy Generation',
-                        type: TaskType.CUSTOM_FUNCTION,
-                        order: 3,
-                        config: {
-                            function: 'generatePolicy',
-                            args: [
-                                '${data.policyHolder}',
-                                '${data.coverageType}',
-                                '${premium-calculation.result.premium}'
-                            ],
-                            timeout: 3000
                         }
                     }
                 ]
@@ -239,11 +181,8 @@ async function initWorkflows() {
                         type: TaskType.API_CALL,
                         order: 1,
                         config: {
-                            url: 'https://api.property-verification.com/check',
+                            url: 'https://jsonplaceholder.typicode.com/posts/3',
                             method: TaskMethod.GET,
-                            headers: {
-                                'Authorization': 'Bearer ${PROPERTY_API_KEY}'
-                            },
                             timeout: 5000,
                             retries: 3,
                             priority: TaskPriority.HIGH
@@ -255,7 +194,7 @@ async function initWorkflows() {
                         type: TaskType.API_CALL,
                         order: 2,
                         config: {
-                            url: 'https://api.mortgage.com/calculate-terms',
+                            url: 'https://jsonplaceholder.typicode.com/posts',
                             method: TaskMethod.POST,
                             headers: {
                                 'Content-Type': 'application/json'
@@ -264,23 +203,11 @@ async function initWorkflows() {
                                 propertyValue: '${data.propertyValue}',
                                 downPayment: '${data.downPayment}',
                                 creditScore: '${data.creditScore}',
-                                propertyVerification: '${property-verification.result}'
+                                propertyVerification: '${property-verification.result.id}'
                             },
                             timeout: 5000,
                             retries: 2,
                             priority: TaskPriority.MEDIUM
-                        }
-                    },
-                    {
-                        id: 'document-generation',
-                        name: 'Document Generation',
-                        type: TaskType.FILE_OPERATION,
-                        order: 3,
-                        config: {
-                            operation: 'write',
-                            path: 'mortgages/${data.propertyValue}_${Date.now()}.pdf',
-                            content: '${mortgage-calculation.result.terms}',
-                            timeout: 3000
                         }
                     }
                 ]

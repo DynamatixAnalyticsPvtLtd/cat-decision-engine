@@ -49,12 +49,19 @@ export class WorkflowEngine {
         try {
             await this.logger.info(`Starting workflow execution: ${workflow.id}`, {
                 workflow,
+                workflowId: workflow.id,
+                workflowName: workflow.name,
                 data,
                 executionId,
                 status: 'started'
             });
 
-            const context: WorkflowContext = { data };
+            const context: WorkflowContext = {
+                data,
+                workflowId: workflow.id,
+                workflowName: workflow.name,
+                executionId
+            };
             const validationResults: ValidationResultItem[] = [];
             const taskResults: TaskResult[] = [];
 
@@ -71,6 +78,9 @@ export class WorkflowEngine {
                     executionId
                 };
                 await this.logger.error(`Workflow validation failed: ${workflow.id}`, {
+                    workflow,
+                    workflowId: workflow.id,
+                    workflowName: workflow.name,
                     error: 'Validation failed',
                     status: 'failed',
                     validationResults,
@@ -95,6 +105,9 @@ export class WorkflowEngine {
                             executionId
                         };
                         await this.logger.error(`Workflow task execution failed: ${workflow.id}`, {
+                            workflow,
+                            workflowId: workflow.id,
+                            workflowName: workflow.name,
                             error: 'Task execution failed',
                             status: 'failed',
                             validationResults,
@@ -115,6 +128,9 @@ export class WorkflowEngine {
             };
 
             await this.logger.info(`Workflow completed successfully: ${workflow.id}`, {
+                workflow,
+                workflowId: workflow.id,
+                workflowName: workflow.name,
                 result,
                 status: 'completed',
                 validationResults,
@@ -125,6 +141,9 @@ export class WorkflowEngine {
 
         } catch (error) {
             await this.logger.error(`Workflow execution failed: ${workflow.id}`, {
+                workflow,
+                workflowId: workflow.id,
+                workflowName: workflow.name,
                 error,
                 status: 'failed',
                 validationResults: result?.validationResults || [],

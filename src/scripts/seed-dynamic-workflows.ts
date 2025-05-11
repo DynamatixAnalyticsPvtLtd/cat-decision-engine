@@ -32,21 +32,21 @@ async function seedWorkflows() {
                     {
                         id: 'loan-amount-validation',
                         name: 'loan-amount-validation',
-                        condition: 'formData.loanAmount > 0 && formData.loanAmount <= 1000000',
+                        condition: 'data.loanAmount > 0 && data.loanAmount <= 1000000',
                         message: 'Loan amount must be between 1 and 1,000,000',
                         onFail: ValidationOnFail.STOP
                     },
                     {
                         id: 'income-validation',
                         name: 'income-validation',
-                        condition: 'formData.annualIncome >= 30000',
+                        condition: 'data.annualIncome >= 30000',
                         message: 'Annual income must be at least 30,000',
                         onFail: ValidationOnFail.STOP
                     },
                     {
                         id: 'employment-validation',
                         name: 'employment-validation',
-                        condition: 'formData.employmentStatus === "employed"',
+                        condition: 'data.employmentStatus === "employed"',
                         message: 'Applicant must be employed',
                         onFail: ValidationOnFail.STOP
                     }
@@ -64,7 +64,7 @@ async function seedWorkflows() {
                                 'Authorization': 'Bearer ${CREDIT_CHECK_API_KEY}'
                             },
                             body: {
-                                applicantName: '${formData.applicantName}'
+                                applicantName: '${data.applicantName}'
                             },
                             timeout: 5000,
                             retries: 3
@@ -79,8 +79,8 @@ async function seedWorkflows() {
                             url: 'https://api.risk-assessment.com/calculate',
                             method: TaskMethod.POST,
                             body: {
-                                loanAmount: '${formData.loanAmount}',
-                                annualIncome: '${formData.annualIncome}',
+                                loanAmount: '${data.loanAmount}',
+                                annualIncome: '${data.annualIncome}',
                                 creditScore: '${credit-check.result.score}'
                             }
                         }
@@ -97,14 +97,14 @@ async function seedWorkflows() {
                     {
                         id: 'age-validation',
                         name: 'age-validation',
-                        condition: 'formData.age >= 18 && formData.age <= 65',
+                        condition: 'data.age >= 18 && data.age <= 65',
                         message: 'Age must be between 18 and 65',
                         onFail: ValidationOnFail.STOP
                     },
                     {
                         id: 'coverage-validation',
                         name: 'coverage-validation',
-                        condition: '["health", "life", "auto"].includes(formData.coverageType)',
+                        condition: '["health", "life", "auto"].includes(data.coverageType)',
                         message: 'Invalid coverage type',
                         onFail: ValidationOnFail.STOP
                     }
@@ -122,8 +122,8 @@ async function seedWorkflows() {
                                 'Authorization': 'Bearer ${MEDICAL_API_KEY}'
                             },
                             body: {
-                                policyHolder: '${formData.policyHolder}',
-                                age: '${formData.age}'
+                                policyHolder: '${data.policyHolder}',
+                                age: '${data.age}'
                             }
                         }
                     },
@@ -136,9 +136,9 @@ async function seedWorkflows() {
                             url: 'https://api.insurance.com/calculate-premium',
                             method: TaskMethod.POST,
                             body: {
-                                coverageType: '${formData.coverageType}',
-                                age: '${formData.age}',
-                                preExistingConditions: '${formData.preExistingConditions}',
+                                coverageType: '${data.coverageType}',
+                                age: '${data.age}',
+                                preExistingConditions: '${data.preExistingConditions}',
                                 medicalHistory: '${medical-check.result.history}'
                             }
                         }
@@ -155,21 +155,21 @@ async function seedWorkflows() {
                     {
                         id: 'property-value-validation',
                         name: 'property-value-validation',
-                        condition: 'formData.propertyValue >= 50000 && formData.propertyValue <= 2000000',
+                        condition: 'data.propertyValue >= 50000 && data.propertyValue <= 2000000',
                         message: 'Property value must be between 50,000 and 2,000,000',
                         onFail: ValidationOnFail.STOP
                     },
                     {
                         id: 'down-payment-validation',
                         name: 'down-payment-validation',
-                        condition: 'formData.downPayment >= formData.propertyValue * 0.2',
+                        condition: 'data.downPayment >= data.propertyValue * 0.2',
                         message: 'Down payment must be at least 20% of property value',
                         onFail: ValidationOnFail.STOP
                     },
                     {
                         id: 'credit-score-validation',
                         name: 'credit-score-validation',
-                        condition: 'formData.creditScore >= 620',
+                        condition: 'data.creditScore >= 620',
                         message: 'Credit score must be at least 620',
                         onFail: ValidationOnFail.STOP
                     }
@@ -184,8 +184,8 @@ async function seedWorkflows() {
                             url: 'https://api.property-verification.com/check',
                             method: TaskMethod.GET,
                             body: {
-                                propertyValue: '${formData.propertyValue}',
-                                downPayment: '${formData.downPayment}'
+                                propertyValue: '${data.propertyValue}',
+                                downPayment: '${data.downPayment}'
                             }
                         }
                     },
@@ -198,11 +198,9 @@ async function seedWorkflows() {
                             url: 'https://api.mortgage.com/calculate-terms',
                             method: TaskMethod.POST,
                             body: {
-                                propertyValue: '${formData.propertyValue}',
-                                downPayment: '${formData.downPayment}',
-                                creditScore: '${formData.creditScore}',
-                                employmentHistory: '${formData.employmentHistory}',
-                                propertyVerification: '${property-verification.result}'
+                                propertyValue: '${data.propertyValue}',
+                                downPayment: '${data.downPayment}',
+                                creditScore: '${data.creditScore}'
                             }
                         }
                     }

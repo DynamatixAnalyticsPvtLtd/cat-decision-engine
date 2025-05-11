@@ -1,18 +1,15 @@
-import { IWorkflowStore } from '../../storage/workflow-store';
 import { WorkflowEngine } from '../workflow-engine';
 import { DefaultLogger } from '../logging/default-logger';
 import { ValidationExecutor } from '../executors/validation-executor';
 import { createDecoratedWorkflowEngine } from './workflow-engine.decorator';
+import { getWorkflowStore } from '../config/workflow-store-singleton';
 
 export function WorkflowMethod() {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value;
 
         descriptor.value = async function (...args: any[]) {
-            const workflowStore = (this as any).workflowStore as IWorkflowStore;
-            if (!workflowStore) {
-                throw new Error('WorkflowStore not initialized');
-            }
+            const workflowStore = await getWorkflowStore();
 
             const logger = new DefaultLogger();
             const validationExecutor = new ValidationExecutor(logger);
