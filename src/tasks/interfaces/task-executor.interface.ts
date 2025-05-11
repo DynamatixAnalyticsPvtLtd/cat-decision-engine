@@ -1,5 +1,5 @@
-import { Task } from '../../core/types';
+import { Task } from '../../core/types/task';
 
 export interface ITaskExecutor {
-    execute(task: Task, context: any): Promise<any>;
+    execute(task: Task, context: { data: any }): Promise<any>;
 } 

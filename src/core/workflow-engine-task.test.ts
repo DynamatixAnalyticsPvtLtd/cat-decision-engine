@@ -4,32 +4,24 @@ import { TaskExecutor } from './executors/task-executor';
 import { DefaultLogger } from './logging/default-logger';
 import { TaskResult } from './types/task-result';
 import { TaskType, TaskMethod } from './enums/task.enum';
-import { TaskFactory } from '../tasks/factory/task.factory';
 
 describe('WorkflowEngine Task Execution', () => {
     let workflowEngine: WorkflowEngine;
     let taskExecutor: jest.Mocked<TaskExecutor>;
     let logger: DefaultLogger;
 
-    beforeAll(() => {
-        jest.spyOn(TaskFactory.prototype, 'executeTask').mockImplementation(async (task, context) => ({
-            task,
-            taskId: task.id,
-            success: true,
-            result: { result: 'success' },
-            metadata: {
-                taskId: task.id,
-                type: task.type,
-                startTime: new Date().toISOString(),
-                endTime: new Date().toISOString(),
-                duration: 0
-            }
-        }));
-    });
-
     beforeEach(() => {
         logger = new DefaultLogger();
         taskExecutor = new TaskExecutor(logger) as jest.Mocked<TaskExecutor>;
+        taskExecutor.execute = jest.fn().mockImplementation(async (task: Task, context: { data: any }) => ({
+            task,
+            taskId: task.id,
+            success: true,
+            output: { result: 'success' },
+            metadata: {
+                contextData: context.data
+            }
+        }));
         workflowEngine = new WorkflowEngine(undefined, taskExecutor, logger);
     });
 
@@ -42,6 +34,7 @@ describe('WorkflowEngine Task Execution', () => {
             const task: Task = {
                 id: 'task-1',
                 type: TaskType.API_CALL,
+                name: 'Test Task',
                 order: 1,
                 config: {
                     url: 'https://api.test.com',
@@ -57,22 +50,27 @@ describe('WorkflowEngine Task Execution', () => {
                 tasks: [task]
             };
 
-            const result = await workflowEngine.execute(workflow, { test: 'value' });
+            const data = { test: 'value' };
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(true);
             expect(result.taskResults).toHaveLength(1);
             expect(result.taskResults[0]).toMatchObject({
                 taskId: 'task-1',
                 success: true,
-                result: { result: { result: 'success' } }
+                output: { result: 'success' },
+                metadata: {
+                    contextData: data
+                }
             });
-            expect(result.taskResults[0].metadata).toBeDefined();
+            expect(taskExecutor.execute).toHaveBeenCalledWith(task, { data });
         });
 
         it('should execute multiple tasks in order', async () => {
             const task1: Task = {
                 id: 'task-1',
                 type: TaskType.API_CALL,
+                name: 'Test Task 1',
                 order: 1,
                 config: {
                     url: 'https://api.test.com/1',
@@ -83,6 +81,7 @@ describe('WorkflowEngine Task Execution', () => {
             const task2: Task = {
                 id: 'task-2',
                 type: TaskType.API_CALL,
+                name: 'Test Task 2',
                 order: 2,
                 config: {
                     url: 'https://api.test.com/2',
@@ -98,21 +97,25 @@ describe('WorkflowEngine Task Execution', () => {
                 tasks: [task1, task2]
             };
 
-            const result = await workflowEngine.execute(workflow, { test: 'value' });
+            const data = { test: 'value' };
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(true);
             expect(result.taskResults).toHaveLength(2);
             expect(result.taskResults[0].taskId).toBe('task-1');
             expect(result.taskResults[1].taskId).toBe('task-2');
+            expect(taskExecutor.execute).toHaveBeenCalledTimes(2);
+            expect(taskExecutor.execute).toHaveBeenNthCalledWith(1, task1, { data });
+            expect(taskExecutor.execute).toHaveBeenNthCalledWith(2, task2, { data });
         });
 
         it('should stop execution on task failure', async () => {
-            // Make the first call to executeTask fail
-            (TaskFactory.prototype.executeTask as jest.Mock).mockRejectedValueOnce(new Error('API call failed'));
+            taskExecutor.execute.mockRejectedValueOnce(new Error('API call failed'));
 
             const task1: Task = {
                 id: 'task-1',
                 type: TaskType.API_CALL,
+                name: 'Test Task 1',
                 order: 1,
                 config: {
                     url: 'https://api.test.com/1',
@@ -123,6 +126,7 @@ describe('WorkflowEngine Task Execution', () => {
             const task2: Task = {
                 id: 'task-2',
                 type: TaskType.API_CALL,
+                name: 'Test Task 2',
                 order: 2,
                 config: {
                     url: 'https://api.test.com/2',
@@ -138,18 +142,21 @@ describe('WorkflowEngine Task Execution', () => {
                 tasks: [task1, task2]
             };
 
-            const result = await workflowEngine.execute(workflow, { test: 'value' });
+            const data = { test: 'value' };
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(false);
             expect(result.taskResults).toHaveLength(1);
             expect(result.taskResults[0].success).toBe(false);
             expect(result.taskResults[0].error).toBe('API call failed');
+            expect(taskExecutor.execute).toHaveBeenCalledTimes(1);
         });
 
         it('should handle task with dependencies', async () => {
             const task1: Task = {
                 id: 'task-1',
                 type: TaskType.API_CALL,
+                name: 'Test Task 1',
                 order: 1,
                 config: {
                     url: 'https://api.test.com/1',
@@ -160,6 +167,7 @@ describe('WorkflowEngine Task Execution', () => {
             const task2: Task = {
                 id: 'task-2',
                 type: TaskType.API_CALL,
+                name: 'Test Task 2',
                 order: 2,
                 config: {
                     url: 'https://api.test.com/2',
@@ -176,12 +184,16 @@ describe('WorkflowEngine Task Execution', () => {
                 tasks: [task1, task2]
             };
 
-            const result = await workflowEngine.execute(workflow, { test: 'value' });
+            const data = { test: 'value' };
+            const result = await workflowEngine.execute(workflow, data);
 
             expect(result.success).toBe(true);
             expect(result.taskResults).toHaveLength(2);
             expect(result.taskResults[0].taskId).toBe('task-1');
             expect(result.taskResults[1].taskId).toBe('task-2');
+            expect(taskExecutor.execute).toHaveBeenCalledTimes(2);
+            expect(taskExecutor.execute).toHaveBeenNthCalledWith(1, task1, { data });
+            expect(taskExecutor.execute).toHaveBeenNthCalledWith(2, task2, { data });
         });
     });
 });

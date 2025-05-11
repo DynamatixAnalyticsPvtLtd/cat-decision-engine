@@ -1,8 +1,9 @@
 import { BaseUseCase, WorkflowIntercept } from './base-usecase';
 import { WorkflowEngine } from '../workflow-engine';
 import { IWorkflowStore } from '../../storage/workflow-store';
-import { Workflow } from '../types';
+import { Workflow } from '../types/workflow';
 import { DefaultLogger } from '../logging/default-logger';
+import { WorkflowError } from '../errors/workflow-error';
 
 // Mock dependencies
 jest.mock('../workflow-engine');
@@ -61,7 +62,7 @@ describe('BaseUseCase', () => {
             mockWorkflowStore.findWorkflowByTrigger.mockResolvedValueOnce(workflow);
 
             const mockWorkflowEngine = {
-                executeWorkflow: jest.fn().mockResolvedValueOnce({
+                execute: jest.fn().mockResolvedValueOnce({
                     success: true,
                     context: {},
                     validationResults: [],
@@ -75,7 +76,7 @@ describe('BaseUseCase', () => {
             const result = await useCase.execute(input);
 
             expect(result).toEqual({ processed: input });
-            expect(mockWorkflowEngine.executeWorkflow).toHaveBeenCalledWith(
+            expect(mockWorkflowEngine.execute).toHaveBeenCalledWith(
                 workflow,
                 expect.objectContaining({
                     className: 'TestUseCase',
@@ -97,9 +98,8 @@ describe('BaseUseCase', () => {
             mockWorkflowStore.findWorkflowByTrigger.mockResolvedValueOnce(workflow);
 
             const mockWorkflowEngine = {
-                executeWorkflow: jest.fn().mockResolvedValueOnce({
+                execute: jest.fn().mockResolvedValueOnce({
                     success: false,
-                    error: 'Workflow failed',
                     context: {},
                     validationResults: [],
                     taskResults: []
@@ -109,13 +109,14 @@ describe('BaseUseCase', () => {
             (WorkflowEngine as jest.Mock).mockImplementationOnce(() => mockWorkflowEngine);
 
             const input = { test: 'data' };
-            await expect(useCase.execute(input)).rejects.toThrow('Workflow failed');
+            await expect(useCase.execute(input)).rejects.toThrow(WorkflowError);
+            await expect(useCase.execute(input)).rejects.toThrow('Workflow execution failed');
 
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'Workflow execution failed',
                 {
                     workflowId: workflow.id,
-                    error: 'Workflow failed'
+                    error: 'Workflow execution failed'
                 }
             );
         });
@@ -125,6 +126,7 @@ describe('BaseUseCase', () => {
             mockWorkflowStore.findWorkflowByTrigger.mockRejectedValueOnce(error);
 
             const input = { test: 'data' };
+            await expect(useCase.execute(input)).rejects.toThrow(WorkflowError);
             await expect(useCase.execute(input)).rejects.toThrow('Store error');
 
             expect(mockLogger.error).toHaveBeenCalledWith(

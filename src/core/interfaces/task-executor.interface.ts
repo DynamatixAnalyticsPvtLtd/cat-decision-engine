@@ -1,6 +1,7 @@
-import { Task, TaskResult, WorkflowContext } from '../types';
+import { Task, WorkflowContext } from '../types';
+import { TaskResult } from '../types/task-result';
 
 export interface ITaskExecutor {
-    executeTask(task: Task, context: WorkflowContext): Promise<TaskResult>;
-    executeTasks(tasks: Task[], context: WorkflowContext): Promise<TaskResult[]>;
+    execute(task: Task, context: WorkflowContext): Promise<TaskResult>;
+    executeBatch(tasks: Task[], context: WorkflowContext): Promise<TaskResult[]>;
 } 

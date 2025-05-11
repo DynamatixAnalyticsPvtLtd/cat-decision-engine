@@ -1,4 +1,5 @@
-import { Task, TaskResult, WorkflowContext } from '../types';
+import { Task, WorkflowContext } from '../types';
+import { TaskResult } from '../types/task-result';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
 import { TaskType } from '../enums/task.enum';
 import { ApiCallTaskConfig } from '../types/task';
@@ -16,7 +17,7 @@ export class TaskExecutor implements ITaskExecutor {
         this.taskFactory = new TaskFactory(this.logger);
     }
 
-    async executeTask(task: Task, context: WorkflowContext): Promise<TaskResult> {
+    async execute(task: Task, context: WorkflowContext): Promise<TaskResult> {
         try {
             this.logger.debug('Starting task execution', {
                 taskId: task.id,
@@ -34,7 +35,7 @@ export class TaskExecutor implements ITaskExecutor {
                 task,
                 taskId: task.id,
                 success: true,
-                result,
+                output: result,
                 metadata: {
                     contextData: context.data
                 }
@@ -58,7 +59,7 @@ export class TaskExecutor implements ITaskExecutor {
         }
     }
 
-    async executeTasks(tasks: Task[], context: WorkflowContext): Promise<TaskResult[]> {
+    async executeBatch(tasks: Task[], context: WorkflowContext): Promise<TaskResult[]> {
         const results: TaskResult[] = [];
         let shouldContinue = true;
 
@@ -68,7 +69,7 @@ export class TaskExecutor implements ITaskExecutor {
             }
 
             try {
-                const result = await this.executeTask(task, context);
+                const result = await this.execute(task, context);
                 results.push(result);
 
                 // Check if we should continue based on task configuration

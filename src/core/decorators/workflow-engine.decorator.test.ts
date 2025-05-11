@@ -4,7 +4,8 @@ import { WorkflowResult } from '../types/workflow-result';
 import { DefaultLogger } from '../logging/default-logger';
 import { ValidationExecutor } from '../executors/validation-executor';
 import { ValidationRule } from '../types/validation-rule';
-import { IWorkflowEngine } from 'core/interfaces/workflow-engine.interface';
+import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';
+import { ValidationOnFail } from 'core/enums/validation.enum';
 
 describe('WorkflowEngine Decorators', () => {
     let mockWorkflowEngine: jest.Mocked<IWorkflowEngine>;
@@ -83,7 +84,7 @@ describe('WorkflowEngine Decorators', () => {
                 name: 'Age Validation',
                 condition: 'data.age >= 18',
                 message: 'Age must be at least 18',
-                onFail: 'stop'
+                onFail: ValidationOnFail.CONTINUE
             };
 
             workflow.validations = [validationRule];

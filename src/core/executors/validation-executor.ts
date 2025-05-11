@@ -9,7 +9,7 @@ export class ValidationExecutor {
         this.logger = logger;
     }
 
-    async executeValidations(rules: ValidationRule[], data: any): Promise<ValidationResult> {
+    async execute(rules: ValidationRule[], data: any): Promise<ValidationResult> {
         const results: ValidationResultItem[] = [];
         let success = true;
 

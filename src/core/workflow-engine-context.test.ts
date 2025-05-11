@@ -51,18 +51,24 @@ describe('WorkflowEngine Context', () => {
             const data = { test: 'value' };
 
             // Mock task executor
-            jest.spyOn(taskExecutor, 'executeTask')
+            jest.spyOn(taskExecutor, 'execute')
                 .mockImplementationOnce(async () => ({
                     task: task1,
                     taskId: task1.id,
                     success: true,
-                    result: { status: 'success' }
+                    output: { status: 'success' },
+                    metadata: {
+                        contextData: data
+                    }
                 }))
                 .mockImplementationOnce(async () => ({
                     task: task2,
                     taskId: task2.id,
                     success: true,
-                    result: { status: 'success' }
+                    output: { status: 'success' },
+                    metadata: {
+                        contextData: data
+                    }
                 }));
 
             const result = await workflowEngine.execute(workflow, data);
@@ -76,21 +82,27 @@ describe('WorkflowEngine Context', () => {
                         task: task1,
                         taskId: task1.id,
                         success: true,
-                        result: { status: 'success' }
+                        output: { status: 'success' },
+                        metadata: {
+                            contextData: data
+                        }
                     },
                     {
                         task: task2,
                         taskId: task2.id,
                         success: true,
-                        result: { status: 'success' }
+                        output: { status: 'success' },
+                        metadata: {
+                            contextData: data
+                        }
                     }
                 ]
             });
 
             // Verify task execution order and context
-            expect(taskExecutor.executeTask).toHaveBeenCalledTimes(2);
-            expect(taskExecutor.executeTask).toHaveBeenNthCalledWith(1, task1, expect.any(Object));
-            expect(taskExecutor.executeTask).toHaveBeenNthCalledWith(2, task2, expect.any(Object));
+            expect(taskExecutor.execute).toHaveBeenCalledTimes(2);
+            expect(taskExecutor.execute).toHaveBeenNthCalledWith(1, task1, expect.any(Object));
+            expect(taskExecutor.execute).toHaveBeenNthCalledWith(2, task2, expect.any(Object));
         });
 
         it('should handle context updates from tasks', async () => {
@@ -117,11 +129,14 @@ describe('WorkflowEngine Context', () => {
             const data = { test: 'value' };
 
             // Mock task executor
-            jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(async () => ({
+            jest.spyOn(taskExecutor, 'execute').mockImplementationOnce(async () => ({
                 task,
                 taskId: task.id,
                 success: true,
-                result: { status: 'success', data: { updated: true } }
+                output: { status: 'success', data: { updated: true } },
+                metadata: {
+                    contextData: data
+                }
             }));
 
             const result = await workflowEngine.execute(workflow, data);
@@ -134,7 +149,10 @@ describe('WorkflowEngine Context', () => {
                     task,
                     taskId: task.id,
                     success: true,
-                    result: { status: 'success', data: { updated: true } }
+                    output: { status: 'success', data: { updated: true } },
+                    metadata: {
+                        contextData: data
+                    }
                 }]
             });
         });

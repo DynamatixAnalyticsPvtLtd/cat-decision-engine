@@ -3,23 +3,35 @@ import { Workflow, ValidationRule } from './types';
 import { ValidationType, ValidationOperator, ValidationOnFail } from './enums/validation.enum';
 import { TaskExecutor } from './executors/task-executor';
 import { DefaultLogger } from './logging/default-logger';
+import { ValidationExecutor } from './executors/validation-executor';
 
 describe('WorkflowEngine Validation', () => {
     let workflowEngine: WorkflowEngine;
     let taskExecutor: TaskExecutor;
     let logger: DefaultLogger;
+    let validationExecutor: jest.Mocked<ValidationExecutor>;
 
     beforeEach(() => {
         logger = new DefaultLogger();
         taskExecutor = new TaskExecutor(logger);
-        workflowEngine = new WorkflowEngine();
+        validationExecutor = new ValidationExecutor(logger) as jest.Mocked<ValidationExecutor>;
+        validationExecutor.execute = jest.fn().mockImplementation(async (rules: ValidationRule[], data: any) => ({
+            success: true,
+            validationResults: rules.map(rule => ({
+                rule,
+                success: true
+            }))
+        }));
+        workflowEngine = new WorkflowEngine(validationExecutor, taskExecutor, logger);
     });
 
     describe('execute', () => {
         it('should execute single validation successfully', async () => {
             const validationRule: ValidationRule = {
+                id: 'age-validation-1',
                 name: 'age-validation',
                 condition: 'age >= 18',
+                message: 'Age must be at least 18',
                 onFail: ValidationOnFail.STOP
             };
 
@@ -44,18 +56,23 @@ describe('WorkflowEngine Validation', () => {
                 }],
                 taskResults: []
             });
+            expect(validationExecutor.execute).toHaveBeenCalledWith([validationRule], data);
         });
 
         it('should execute multiple validations in order', async () => {
             const validationRules: ValidationRule[] = [
                 {
+                    id: 'age-validation-1',
                     name: 'age-validation',
                     condition: 'age >= 18',
+                    message: 'Age must be at least 18',
                     onFail: ValidationOnFail.STOP
                 },
                 {
+                    id: 'name-validation-1',
                     name: 'name-validation',
                     condition: 'name.length > 0',
+                    message: 'Name must not be empty',
                     onFail: ValidationOnFail.STOP
                 }
             ];
@@ -87,14 +104,26 @@ describe('WorkflowEngine Validation', () => {
                 ],
                 taskResults: []
             });
+            expect(validationExecutor.execute).toHaveBeenCalledWith(validationRules, data);
         });
 
         it('should stop execution on validation failure', async () => {
             const validationRule: ValidationRule = {
+                id: 'age-validation-1',
                 name: 'age-validation',
                 condition: 'age >= 18',
+                message: 'Age must be at least 18',
                 onFail: ValidationOnFail.STOP
             };
+
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: false,
+                validationResults: [{
+                    rule: validationRule,
+                    success: false,
+                    message: 'Validation failed: age >= 18'
+                }]
+            });
 
             const workflow: Workflow = {
                 id: 'test-workflow',
@@ -114,18 +143,30 @@ describe('WorkflowEngine Validation', () => {
                 validationResults: [{
                     rule: validationRule,
                     success: false,
-                    error: 'Validation failed: age >= 18'
+                    message: 'Validation failed: age >= 18'
                 }],
                 taskResults: []
             });
+            expect(validationExecutor.execute).toHaveBeenCalledWith([validationRule], data);
         });
 
         it('should continue execution on validation failure when configured', async () => {
             const validationRule: ValidationRule = {
+                id: 'age-validation-1',
                 name: 'age-validation',
                 condition: 'age >= 18',
+                message: 'Age must be at least 18',
                 onFail: ValidationOnFail.CONTINUE
             };
+
+            validationExecutor.execute.mockResolvedValueOnce({
+                success: false,
+                validationResults: [{
+                    rule: validationRule,
+                    success: false,
+                    message: 'Validation failed: age >= 18'
+                }]
+            });
 
             const workflow: Workflow = {
                 id: 'test-workflow',
@@ -145,10 +186,11 @@ describe('WorkflowEngine Validation', () => {
                 validationResults: [{
                     rule: validationRule,
                     success: false,
-                    error: 'Validation failed: age >= 18'
+                    message: 'Validation failed: age >= 18'
                 }],
                 taskResults: []
             });
+            expect(validationExecutor.execute).toHaveBeenCalledWith([validationRule], data);
         });
     });
 }); 

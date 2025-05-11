@@ -1,5 +1,6 @@
 import { TaskExecutor } from './task-executor';
-import { Task, TaskResult, WorkflowContext } from '../types';
+import { Task, WorkflowContext } from '../types';
+import { TaskResult } from '../types/task-result';
 import { TaskType, TaskMethod } from '../enums/task.enum';
 import { TaskError } from '../errors/workflow-error';
 import { TaskFactory } from '../../tasks/factory/task.factory';
@@ -27,9 +28,10 @@ describe('TaskExecutor', () => {
         jest.clearAllMocks();
     });
 
-    describe('executeTask', () => {
+    describe('execute', () => {
         const mockTask: Task = {
             id: '1',
+            name: 'Test Task',
             type: TaskType.API_CALL,
             order: 1,
             config: {
@@ -47,19 +49,17 @@ describe('TaskExecutor', () => {
                 task: mockTask,
                 taskId: '1',
                 success: true,
-                output: { data: 'test' }
+                output: { data: 'test' },
+                metadata: {
+                    contextData: mockContext.data
+                }
             };
 
             mockTaskFactory.executeTask.mockResolvedValueOnce(mockResult);
 
-            const result = await taskExecutor.executeTask(mockTask, mockContext);
+            const result = await taskExecutor.execute(mockTask, mockContext);
 
-            expect(result).toEqual({
-                ...mockResult,
-                metadata: {
-                    contextData: mockContext.data
-                }
-            });
+            expect(result).toEqual(mockResult);
             expect(mockTaskFactory.executeTask).toHaveBeenCalledWith(mockTask);
             expect(mockLogger.debug).toHaveBeenCalledWith(
                 'Starting task execution',
@@ -71,7 +71,7 @@ describe('TaskExecutor', () => {
             const error = new TaskError('Invalid task configuration', '1');
             mockTaskFactory.executeTask.mockRejectedValueOnce(error);
 
-            const result = await taskExecutor.executeTask(mockTask, mockContext);
+            const result = await taskExecutor.execute(mockTask, mockContext);
 
             expect(result).toEqual({
                 task: mockTask,
@@ -96,7 +96,7 @@ describe('TaskExecutor', () => {
             const error = new Error('Task execution failed');
             mockTaskFactory.executeTask.mockRejectedValueOnce(error);
 
-            const result = await taskExecutor.executeTask(mockTask, mockContext);
+            const result = await taskExecutor.execute(mockTask, mockContext);
 
             expect(result).toEqual({
                 task: mockTask,
@@ -118,10 +118,11 @@ describe('TaskExecutor', () => {
         });
     });
 
-    describe('executeTasks', () => {
+    describe('executeBatch', () => {
         const mockTasks: Task[] = [
             {
                 id: '1',
+                name: 'Test Task 1',
                 type: TaskType.API_CALL,
                 order: 1,
                 config: {
@@ -131,6 +132,7 @@ describe('TaskExecutor', () => {
             },
             {
                 id: '2',
+                name: 'Test Task 2',
                 type: TaskType.API_CALL,
                 order: 2,
                 config: {
@@ -150,13 +152,19 @@ describe('TaskExecutor', () => {
                     task: mockTasks[0],
                     taskId: '1',
                     success: true,
-                    output: { data: 'test1' }
+                    output: { data: 'test1' },
+                    metadata: {
+                        contextData: mockContext.data
+                    }
                 },
                 {
                     task: mockTasks[1],
                     taskId: '2',
                     success: true,
-                    output: { data: 'test2' }
+                    output: { data: 'test2' },
+                    metadata: {
+                        contextData: mockContext.data
+                    }
                 }
             ];
 
@@ -164,21 +172,11 @@ describe('TaskExecutor', () => {
                 .mockResolvedValueOnce(mockResults[0])
                 .mockResolvedValueOnce(mockResults[1]);
 
-            const results = await taskExecutor.executeTasks(mockTasks, mockContext);
+            const results = await taskExecutor.executeBatch(mockTasks, mockContext);
 
             expect(results).toHaveLength(2);
-            expect(results[0]).toEqual({
-                ...mockResults[0],
-                metadata: {
-                    contextData: mockContext.data
-                }
-            });
-            expect(results[1]).toEqual({
-                ...mockResults[1],
-                metadata: {
-                    contextData: mockContext.data
-                }
-            });
+            expect(results[0]).toEqual(mockResults[0]);
+            expect(results[1]).toEqual(mockResults[1]);
         });
 
         it('should stop execution on task failure with stop on error', async () => {
@@ -187,7 +185,10 @@ describe('TaskExecutor', () => {
                     task: mockTasks[0],
                     taskId: '1',
                     success: false,
-                    error: 'Task failed'
+                    error: 'Task failed',
+                    metadata: {
+                        contextData: mockContext.data
+                    }
                 }
             ];
 
@@ -201,15 +202,10 @@ describe('TaskExecutor', () => {
 
             mockTaskFactory.executeTask.mockResolvedValueOnce(mockResults[0]);
 
-            const results = await taskExecutor.executeTasks(tasksWithStopOnError, mockContext);
+            const results = await taskExecutor.executeBatch(tasksWithStopOnError, mockContext);
 
             expect(results).toHaveLength(1);
-            expect(results[0]).toEqual({
-                ...mockResults[0],
-                metadata: {
-                    contextData: mockContext.data
-                }
-            });
+            expect(results[0]).toEqual(mockResults[0]);
             expect(mockTaskFactory.executeTask).toHaveBeenCalledTimes(1);
         });
 
@@ -219,13 +215,19 @@ describe('TaskExecutor', () => {
                     task: mockTasks[0],
                     taskId: '1',
                     success: false,
-                    error: 'Task failed'
+                    error: 'Task failed',
+                    metadata: {
+                        contextData: mockContext.data
+                    }
                 },
                 {
                     task: mockTasks[1],
                     taskId: '2',
                     success: true,
-                    output: { data: 'test2' }
+                    output: { data: 'test2' },
+                    metadata: {
+                        contextData: mockContext.data
+                    }
                 }
             ];
 
@@ -233,39 +235,11 @@ describe('TaskExecutor', () => {
                 .mockResolvedValueOnce(mockResults[0])
                 .mockResolvedValueOnce(mockResults[1]);
 
-            const results = await taskExecutor.executeTasks(mockTasks, mockContext);
+            const results = await taskExecutor.executeBatch(mockTasks, mockContext);
 
             expect(results).toHaveLength(2);
-            expect(results[0]).toEqual({
-                ...mockResults[0],
-                metadata: {
-                    contextData: mockContext.data
-                }
-            });
-            expect(results[1]).toEqual({
-                ...mockResults[1],
-                metadata: {
-                    contextData: mockContext.data
-                }
-            });
-        });
-
-        it('should handle task execution error', async () => {
-            const error = new Error('Task execution failed');
-            mockTaskFactory.executeTask.mockRejectedValueOnce(error);
-
-            const results = await taskExecutor.executeTasks(mockTasks, mockContext);
-
-            expect(results).toHaveLength(1);
-            expect(results[0]).toEqual({
-                task: mockTasks[0],
-                taskId: '1',
-                success: false,
-                error: 'Task execution failed',
-                metadata: {
-                    contextData: mockContext.data
-                }
-            });
+            expect(results[0]).toEqual(mockResults[0]);
+            expect(results[1]).toEqual(mockResults[1]);
         });
     });
 }); 

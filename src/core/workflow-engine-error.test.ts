@@ -29,8 +29,10 @@ describe('WorkflowEngine Error Handling', () => {
 
         it('should handle validation errors gracefully', async () => {
             const validationRule: ValidationRule = {
+                id: 'age-validation-1',
                 name: 'age-validation',
                 condition: 'age >= 18',
+                message: 'Age must be at least 18',
                 onFail: ValidationOnFail.STOP
             };
 
@@ -82,7 +84,7 @@ describe('WorkflowEngine Error Handling', () => {
             const data = { test: 'value' };
 
             // Mock task executor to throw error
-            jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(async () => ({
+            jest.spyOn(taskExecutor, 'execute').mockImplementationOnce(async () => ({
                 task,
                 taskId: task.id,
                 success: false,
@@ -199,7 +201,7 @@ describe('WorkflowEngine Error Handling', () => {
                     task,
                     taskId: task.id,
                     success: false,
-                    error: 'URL is required for API task',
+                    error: 'URL is required for API tasks',
                     metadata: { contextData: data }
                 }]
             });
@@ -230,7 +232,7 @@ describe('WorkflowEngine Error Handling', () => {
             const data = { test: 'value' };
 
             // Mock task executor to simulate timeout
-            jest.spyOn(taskExecutor, 'executeTask').mockImplementationOnce(async () => ({
+            jest.spyOn(taskExecutor, 'execute').mockImplementationOnce(async () => ({
                 task,
                 taskId: task.id,
                 success: false,

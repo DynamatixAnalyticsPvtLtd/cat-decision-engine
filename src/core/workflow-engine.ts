@@ -7,7 +7,9 @@ import { Workflow } from './types/workflow';
 import { WorkflowResult } from './types/workflow-result';
 import { WorkflowError } from './errors/workflow-error';
 import { WorkflowContext } from './types/workflow-context';
-import { ValidationResult, TaskResult } from './types';
+import { ValidationResultItem } from './types/validation-result';
+import { TaskResult } from './types/task-result';
+import { Task } from './types/task';
 
 export class WorkflowEngine {
     private readonly logger: ILogger;
@@ -25,15 +27,10 @@ export class WorkflowEngine {
         this.logger = logger || new DefaultLogger();
         this.taskFactory = new TaskFactory(this.logger);
         this.taskExecutor = taskExecutor || new TaskExecutor(this.logger);
-        this.validationExecutor = validationExecutor || new ValidationExecutor();
+        this.validationExecutor = validationExecutor || new ValidationExecutor(this.logger);
     }
 
-    async execute(workflow: Workflow | null, data: any): Promise<{
-        success: boolean;
-        context: WorkflowContext;
-        validationResults: ValidationResult[];
-        taskResults: TaskResult[];
-    }> {
+    async execute(workflow: Workflow | null, data: any): Promise<WorkflowResult> {
         if (!workflow) {
             throw new WorkflowError('Workflow is required', 'VALIDATION_ERROR');
         }
@@ -42,42 +39,37 @@ export class WorkflowEngine {
             this.logger.info(`Starting workflow execution: ${workflow.id}`, { workflow, data });
 
             const context: WorkflowContext = { data };
-            const validationResults: ValidationResult[] = [];
+            const validationResults: ValidationResultItem[] = [];
             const taskResults: TaskResult[] = [];
 
-            let stopOnValidationFail = false;
-
-            // Execute validations
-            for (const validation of workflow.validations) {
-                const result = await this.validationExecutor.executeValidation(validation, context);
-                validationResults.push(result);
-                if (!result.success && validation.onFail === 'stop') {
-                    stopOnValidationFail = true;
-                    break;
-                }
-            }
-
-            if (stopOnValidationFail) {
+            // Execute validations using ValidationExecutor
+            const validationResult = await this.validationExecutor.execute(workflow.validations, data);
+            validationResults.push(...validationResult.validationResults);
+            if (!validationResult.success) {
                 return {
                     success: false,
                     context,
                     validationResults,
-                    taskResults
+                    taskResults,
+                    error: 'Validation failed'
                 };
             }
 
-            // Execute tasks
-            for (const task of workflow.tasks) {
-                const result = await this.taskExecutor.executeTask(task, context);
-                taskResults.push(result);
-                if (!result.success) {
-                    break;
-                }
+            // Execute tasks using TaskExecutor
+            const taskResult = await this.taskExecutor.executeBatch(workflow.tasks, context);
+            taskResults.push(...taskResult);
+            if (taskResult.some(result => !result.success)) {
+                return {
+                    success: false,
+                    context,
+                    validationResults,
+                    taskResults,
+                    error: 'Task execution failed'
+                };
             }
 
-            const success = taskResults.every(result => result.success);
-            const result = {
-                success,
+            const result: WorkflowResult = {
+                success: true,
                 context,
                 validationResults,
                 taskResults
@@ -88,7 +80,10 @@ export class WorkflowEngine {
 
         } catch (error) {
             this.logger.error(`Workflow execution failed: ${workflow.id}`, { error });
-            throw error;
+            throw error instanceof WorkflowError ? error : new WorkflowError(
+                error instanceof Error ? error.message : 'Workflow execution failed',
+                'WORKFLOW_ERROR'
+            );
         }
     }
 } 

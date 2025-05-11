@@ -1,5 +1,5 @@
 import { TaskValidationService } from './task-validation.service';
-import { BaseTask } from '../../tasks/base/task.interface';
+import { Task } from '../types/task';
 import { ApiTask } from '../../tasks/api/api-task.interface';
 import { TaskType, TaskMethod } from '../../tasks/enums/task.enum';
 import { TaskError } from '../errors/workflow-error';
@@ -14,10 +14,12 @@ describe('TaskValidationService', () => {
     describe('validateTask', () => {
         describe('Base Task Validation', () => {
             it('should validate task with required fields', () => {
-                const task: BaseTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test Task',
                     type: TaskType.API_CALL,
-                    order: 1
+                    order: 1,
+                    config: {}
                 };
 
                 expect(() => validationService.validateTask(task)).not.toThrow();
@@ -25,19 +27,35 @@ describe('TaskValidationService', () => {
 
             it('should throw error when task ID is missing', () => {
                 const task = {
+                    name: 'Test Task',
                     type: TaskType.API_CALL,
-                    order: 1
-                } as BaseTask;
+                    order: 1,
+                    config: {}
+                } as Task;
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
                 expect(() => validationService.validateTask(task)).toThrow('Task ID is required');
             });
 
+            it('should throw error when task name is missing', () => {
+                const task = {
+                    id: '1',
+                    type: TaskType.API_CALL,
+                    order: 1,
+                    config: {}
+                } as Task;
+
+                expect(() => validationService.validateTask(task)).toThrow(TaskError);
+                expect(() => validationService.validateTask(task)).toThrow('Task name is required');
+            });
+
             it('should throw error when task type is missing', () => {
                 const task = {
                     id: '1',
-                    order: 1
-                } as BaseTask;
+                    name: 'Test Task',
+                    order: 1,
+                    config: {}
+                } as Task;
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
                 expect(() => validationService.validateTask(task)).toThrow('Task type is required');
@@ -46,8 +64,10 @@ describe('TaskValidationService', () => {
             it('should throw error when task order is not a number', () => {
                 const task = {
                     id: '1',
+                    name: 'Test Task',
                     type: TaskType.API_CALL,
-                    order: '1' as any
+                    order: '1' as any,
+                    config: {}
                 };
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
@@ -57,8 +77,10 @@ describe('TaskValidationService', () => {
             it('should throw error for unsupported task type', () => {
                 const task = {
                     id: '1',
+                    name: 'Test Task',
                     type: 'unsupported' as TaskType,
-                    order: 1
+                    order: 1,
+                    config: {}
                 };
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
@@ -68,8 +90,9 @@ describe('TaskValidationService', () => {
 
         describe('API Task Validation', () => {
             it('should validate API task with required fields', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
@@ -82,36 +105,39 @@ describe('TaskValidationService', () => {
             });
 
             it('should throw error when URL is missing', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
                         method: TaskMethod.GET
-                    } as any
+                    }
                 };
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
-                expect(() => validationService.validateTask(task)).toThrow('URL is required for API task');
+                expect(() => validationService.validateTask(task)).toThrow('URL is required for API tasks');
             });
 
             it('should throw error when method is missing', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
                         url: 'https://api.test.com'
-                    } as any
+                    }
                 };
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
-                expect(() => validationService.validateTask(task)).toThrow('Method is required for API task');
+                expect(() => validationService.validateTask(task)).toThrow('Invalid HTTP method for API task');
             });
 
             it('should throw error for invalid URL format', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
@@ -125,8 +151,9 @@ describe('TaskValidationService', () => {
             });
 
             it('should throw error for invalid HTTP method', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
@@ -136,12 +163,13 @@ describe('TaskValidationService', () => {
                 };
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
-                expect(() => validationService.validateTask(task)).toThrow('Invalid HTTP method: INVALID');
+                expect(() => validationService.validateTask(task)).toThrow('Invalid HTTP method for API task');
             });
 
             it('should throw error for negative timeout', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
@@ -152,12 +180,13 @@ describe('TaskValidationService', () => {
                 };
 
                 expect(() => validationService.validateTask(task)).toThrow(TaskError);
-                expect(() => validationService.validateTask(task)).toThrow('Timeout must be a positive number');
+                expect(() => validationService.validateTask(task)).toThrow('Timeout must be a number');
             });
 
             it('should throw error for invalid retry configuration', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
@@ -175,8 +204,9 @@ describe('TaskValidationService', () => {
             });
 
             it('should validate task with valid retry configuration', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {
@@ -193,8 +223,9 @@ describe('TaskValidationService', () => {
             });
 
             it('should validate task with valid timeout', () => {
-                const task: ApiTask = {
+                const task: Task = {
                     id: '1',
+                    name: 'Test API Task',
                     type: TaskType.API_CALL,
                     order: 1,
                     config: {

@@ -5,5 +5,5 @@ export interface ValidationRule {
     name: string;
     condition: string;
     message: string;
-    onFail?: 'stop' | 'continue';
+    onFail: ValidationOnFail;
 } 

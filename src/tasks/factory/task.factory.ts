@@ -1,68 +1,67 @@
 import { ILogger } from '../../core/interfaces/logger.interface';
 import { TaskType } from '../enums/task.enum';
-import { BaseTask, TaskResult } from '../base/task.interface';
-import { ApiTask } from '../api/api-task.interface';
+import { Task, TaskResult } from '../../core/types/task';
 import { TaskError } from '../../core/errors/workflow-error';
 import { ApiTaskExecutor } from '../api/api-task.executor';
 import { TaskValidationService } from '../../core/services/task-validation.service';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
 
 export class TaskFactory {
-    private executors: Map<TaskType, ITaskExecutor>;
+    private taskExecutors: Map<TaskType, ITaskExecutor>;
     private validationService: TaskValidationService;
 
     constructor(private readonly logger: ILogger) {
+        this.taskExecutors = new Map();
         this.validationService = new TaskValidationService();
-        this.executors = new Map();
-        this.initializeExecutors();
+        this.initializeTaskExecutors();
     }
 
-    private initializeExecutors(): void {
-        this.executors.set(TaskType.API_CALL, new ApiTaskExecutor(this.logger));
+    private initializeTaskExecutors(): void {
+        this.taskExecutors.set(TaskType.API_CALL, new ApiTaskExecutor(this.logger));
+        // Add other task executors as needed
     }
 
-    getTaskExecutor(type: TaskType): ITaskExecutor | undefined {
-        return this.executors.get(type);
+    public getTaskExecutor(taskType: TaskType): ITaskExecutor | null {
+        return this.taskExecutors.get(taskType) || null;
     }
 
-    async executeTask(task: BaseTask, context: any): Promise<TaskResult> {
-        // Validate task before execution
-        this.validationService.validateTask(task);
-
-        const executor = this.getTaskExecutor(task.type);
-
-        if (!executor) {
-            const error = `No executor found for task type: ${task.type}`;
-            this.logger.error(error, { taskId: task.id });
-            throw new TaskError(error, task.id);
-        }
-
+    public async executeTask(task: Task, context: { data: any }): Promise<TaskResult> {
         try {
-            this.logger.debug('Starting task execution', {
+            this.logger.debug('Starting task execution', { taskId: task.id, type: task.type });
+
+            // Validate task
+            this.validationService.validateTask(task);
+
+            // Get executor for task type
+            const executor = this.getTaskExecutor(task.type);
+            if (!executor) {
+                throw new TaskError(`Unsupported task type: ${task.type}`);
+            }
+
+            // Execute task
+            const output = await executor.execute(task, context);
+
+            // Return task result
+            return {
                 taskId: task.id,
-                type: task.type
+                success: true,
+                output,
+                metadata: {
+                    contextData: context.data
+                }
+            };
+        } catch (error) {
+            this.logger.error('Task execution failed', {
+                taskId: task.id,
+                type: task.type,
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
 
-            // Type assertion based on task type
-            switch (task.type) {
-                case TaskType.API_CALL:
-                    return await executor.execute(task as ApiTask, context);
-                default:
-                    throw new TaskError(`Unsupported task type: ${task.type}`, task.id);
-            }
-        } catch (error) {
             if (error instanceof TaskError) {
                 throw error;
             }
 
-            const errorMessage = error instanceof Error ? error.message : 'Unknown task execution error';
-            this.logger.error('Task execution failed', {
-                taskId: task.id,
-                type: task.type,
-                error: errorMessage
-            });
-
-            throw new TaskError(errorMessage, task.id);
+            throw new TaskError(error instanceof Error ? error.message : 'Unknown error');
         }
     }
 } 

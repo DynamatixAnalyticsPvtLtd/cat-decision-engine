@@ -74,13 +74,28 @@ export type TaskConfig =
 
 export interface Task {
     id: string;
+    name: string;
     type: TaskType;
-    name?: string;
-    description?: string;
     order: number;
-    config: TaskConfig;
-    retry?: boolean;
-    onError?: 'stop' | 'continue' | 'retry';
-    timeout?: number;
-    metadata?: Record<string, any>;
+    config: {
+        url?: string;
+        method?: string;
+        headers?: Record<string, string>;
+        body?: any;
+        function?: string;
+        args?: any[];
+        timeout?: number;
+        [key: string]: any;
+    };
+    onError?: 'stop' | 'continue';
+}
+
+export interface TaskResult<T = any> {
+    taskId: string;
+    success: boolean;
+    output?: T;
+    error?: string;
+    metadata?: {
+        contextData: any;
+    };
 } 

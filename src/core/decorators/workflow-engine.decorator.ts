@@ -1,9 +1,9 @@
-import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';
 import { Workflow } from '../types/workflow';
 import { WorkflowResult } from '../types/workflow-result';
 import { ILogger } from '../interfaces/logger.interface';
 import { ValidationExecutor } from '../executors/validation-executor';
 import { ValidationResultItem } from '../types/validation-result';
+import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';
 
 /**
  * Base decorator class for WorkflowEngine
@@ -67,14 +67,16 @@ export class ValidationWorkflowEngineDecorator extends WorkflowEngineDecorator {
             return super.execute(workflow, data);
         }
 
-        const validationResult = await this.validationExecutor.executeValidations(workflow.validations, data);
+        const validationResult = await this.validationExecutor.execute(workflow.validations, data);
 
         if (!validationResult.success) {
+            const failedValidations = validationResult.validationResults.filter(v => !v.success);
             return {
                 success: false,
                 context: { data },
-                validationResults: validationResult.validationResults as ValidationResultItem[],
-                taskResults: []
+                validationResults: validationResult.validationResults,
+                taskResults: [],
+                error: failedValidations.map(v => v.message).join(', ')
             };
         }
 
