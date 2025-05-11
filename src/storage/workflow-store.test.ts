@@ -1,6 +1,6 @@
 import { MongoWorkflowStore } from './workflow-store';
 import { Workflow } from '../core/types';
-import { ILogger } from '../core/interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 
 describe('MongoWorkflowStore', () => {
     let store: MongoWorkflowStore;

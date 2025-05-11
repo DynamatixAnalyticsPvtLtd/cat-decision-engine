@@ -1,4 +1,4 @@
-import { ILogger } from '../interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 
 export class DefaultLogger implements ILogger {
     debug(message: string, meta?: Record<string, any>): void {

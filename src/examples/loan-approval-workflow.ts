@@ -33,7 +33,7 @@ const validationRules: ValidationRule[] = [
     }
 ];
 
-// Define tasks
+// Define tasks using JSONPlaceholder API
 const tasks: Task[] = [
     {
         id: 'check-credit-history',
@@ -41,8 +41,8 @@ const tasks: Task[] = [
         type: TaskType.API_CALL,
         order: 1,
         config: {
-            url: 'https://api.credit-bureau.com/history',
-            method: TaskMethod.POST,
+            url: 'https://jsonplaceholder.typicode.com/posts/1',
+            method: TaskMethod.GET,
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -54,8 +54,8 @@ const tasks: Task[] = [
         type: TaskType.API_CALL,
         order: 2,
         config: {
-            url: 'https://api.risk-scoring.com/calculate',
-            method: TaskMethod.POST,
+            url: 'https://jsonplaceholder.typicode.com/posts/2',
+            method: TaskMethod.GET,
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -67,8 +67,8 @@ const tasks: Task[] = [
         type: TaskType.API_CALL,
         order: 3,
         config: {
-            url: 'https://api.loan-approval.com/decide',
-            method: TaskMethod.POST,
+            url: 'https://jsonplaceholder.typicode.com/posts/3',
+            method: TaskMethod.GET,
             headers: {
                 'Content-Type': 'application/json'
             }

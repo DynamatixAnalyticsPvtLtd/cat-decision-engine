@@ -5,7 +5,7 @@ import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
 import { TaskError } from './errors/workflow-error';
 import { TaskExecutor } from './executors/task-executor';
 import { ValidationExecutor } from './executors/validation-executor';
-import { ILogger } from './interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 
 jest.mock('./executors/task-executor');
 jest.mock('./executors/validation-executor');

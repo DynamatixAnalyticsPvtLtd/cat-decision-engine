@@ -2,7 +2,7 @@ import { Task } from '../../core/types/task';
 import { TaskType } from '../enums/task.enum';
 import { TaskError } from '../../core/errors/workflow-error';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
-import { ILogger } from '../../core/interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 import axios, { AxiosRequestConfig } from 'axios';
 
 export class ApiTaskExecutor implements ITaskExecutor {
@@ -22,7 +22,7 @@ export class ApiTaskExecutor implements ITaskExecutor {
         };
 
         try {
-            this.logger.debug('Executing API task', {
+            await this.logger.debug('Executing API task', {
                 taskId: task.id,
                 url: config.url,
                 method: config.method
@@ -36,7 +36,7 @@ export class ApiTaskExecutor implements ITaskExecutor {
                 data: response.data
             };
         } catch (error) {
-            this.logger.error('API task execution failed', {
+            await this.logger.error('API task execution failed', {
                 taskId: task.id,
                 error: error instanceof Error ? error.message : 'Unknown error'
             });

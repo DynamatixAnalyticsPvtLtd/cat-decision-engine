@@ -1,79 +1,70 @@
-import { loanApprovalWorkflow, processLoanApplication, applicationData } from './loan-approval-workflow';
+import { loanApprovalWorkflow, applicationData } from './loan-approval-workflow';
 import { DefaultLogger } from '../core/logging/default-logger';
 import { ValidationExecutor } from '../core/executors/validation-executor';
 import { createDecoratedWorkflowEngine } from '../core/decorators/workflow-engine.decorator';
-import { Task } from '../core/types/task';
-import { IWorkflowEngine } from '../core/interfaces/workflow-engine.interface';
+import { MongoClient } from 'mongodb';
+import { MongoLogger } from '../core/logging/mongo-logger';
+import { ILogger } from 'core/logging/logger.interface';
+import { WorkflowEngine } from '../core/workflow-engine';
 
 describe('Loan Approval Workflow', () => {
-    let mockWorkflowEngine: jest.Mocked<IWorkflowEngine>;
-    let logger: DefaultLogger;
+    let logger: MongoLogger;
     let validationExecutor: ValidationExecutor;
+    let mongoClient: MongoClient;
+    const mongoUrl = process.env.MONGODB_URI;
+    const dbName = process.env.DB_NAME || 'workflow-engine';
+    const collectionName = process.env.COLLECTION_NAME || 'workflow_logs';
+
+    beforeAll(async () => {
+        if (!mongoUrl) {
+            throw new Error('MONGODB_URI environment variable is not set');
+        }
+        mongoClient = new MongoClient(mongoUrl);
+        await mongoClient.connect();
+        // Clear the collection before tests
+        await mongoClient.db(dbName).collection(collectionName).deleteMany({});
+    }, 10000);
+
+    afterAll(async () => {
+        await mongoClient.close();
+    }, 5000);
 
     beforeEach(() => {
-        // Reset mocks
-        jest.clearAllMocks();
-
         // Create instances
-        logger = new DefaultLogger();
+        logger = new MongoLogger();
         validationExecutor = new ValidationExecutor(logger);
-        mockWorkflowEngine = {
-            execute: jest.fn()
-        } as jest.Mocked<IWorkflowEngine>;
-    });
+    }, 5000);
+
+    afterEach(async () => {
+        if (logger) {
+            await logger.close();
+        }
+    }, 5000);
 
     it('should process a valid loan application successfully', async () => {
-        // Mock successful workflow execution
-        const successResult = {
-            success: true,
-            context: { data: applicationData },
-            validationResults: [],
-            taskResults: [
-                {
-                    task: loanApprovalWorkflow.tasks[0],
-                    taskId: 'check-credit-history',
-                    success: true,
-                    output: { creditHistory: 'good' },
-                    metadata: {
-                        contextData: applicationData
-                    }
-                },
-                {
-                    task: loanApprovalWorkflow.tasks[1],
-                    taskId: 'calculate-risk-score',
-                    success: true,
-                    output: { riskScore: 0.8 },
-                    metadata: {
-                        contextData: applicationData
-                    }
-                },
-                {
-                    task: loanApprovalWorkflow.tasks[2],
-                    taskId: 'make-approval-decision',
-                    success: true,
-                    output: { approved: true, interestRate: 5.5 },
-                    metadata: {
-                        contextData: applicationData
-                    }
-                }
-            ]
-        };
-
-        mockWorkflowEngine.execute.mockResolvedValueOnce(successResult);
-
         // Process the application
-        const result = await processLoanApplication(applicationData);
+        const result = await processLoanApplication(applicationData, logger);
 
         // Verify the result
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('Task execution failed');
+        expect(result.success).toBe(true);
         expect(result.validationResults).toHaveLength(3);
         result.validationResults.forEach(vr => expect(vr.success).toBe(true));
         expect(result.taskResults).toHaveLength(3);
-        result.taskResults.forEach(tr => {
-            expect(tr.success).toBe(false);
-            expect(tr.error).toMatch(/ENOTFOUND/);
+
+        // Verify JSONPlaceholder responses
+        result.taskResults.forEach((tr, index) => {
+            expect(tr.success).toBe(true);
+            expect(tr.output).toHaveProperty('statusCode', 200);
+            expect(tr.output).toHaveProperty('headers');
+            expect(tr.output).toHaveProperty('data');
+            expect(tr.output.data).toHaveProperty('id', index + 1);
+            expect(tr.output.data).toHaveProperty('title');
+            expect(tr.output.data).toHaveProperty('body');
         });
+
+        // Verify logs for this workflow run
+        const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+        expect(logs.length).toBeGreaterThan(0);
     });
 
     it('should fail validation for underage applicant', async () => {
@@ -82,24 +73,8 @@ describe('Loan Approval Workflow', () => {
             age: 16
         };
 
-        // Mock workflow execution with validation failure
-        const validationFailureResult = {
-            success: false,
-            context: { data: underageApplication },
-            validationResults: [
-                {
-                    rule: loanApprovalWorkflow.validations[0],
-                    success: false,
-                    message: 'Applicant must be at least 18 years old'
-                }
-            ],
-            taskResults: []
-        };
-
-        mockWorkflowEngine.execute.mockResolvedValueOnce(validationFailureResult);
-
         // Process the application
-        const result = await processLoanApplication(underageApplication);
+        const result = await processLoanApplication(underageApplication, logger);
 
         // Verify the result
         expect(result.success).toBe(false);
@@ -109,6 +84,10 @@ describe('Loan Approval Workflow', () => {
         expect(ageValidation.message).toBe('Applicant must be at least 18 years old');
         result.validationResults.filter(vr => vr.rule.id !== 'age-validation').forEach(vr => expect(vr.success).toBe(true));
         expect(result.taskResults).toHaveLength(0);
+
+        // Verify logs for this workflow run
+        const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+        expect(logs.length).toBeGreaterThan(0);
     });
 
     it('should fail validation for low income', async () => {
@@ -117,24 +96,8 @@ describe('Loan Approval Workflow', () => {
             monthlyIncome: 2000
         };
 
-        // Mock workflow execution with validation failure
-        const validationFailureResult = {
-            success: false,
-            context: { data: lowIncomeApplication },
-            validationResults: [
-                {
-                    rule: loanApprovalWorkflow.validations[1],
-                    success: false,
-                    message: 'Monthly income must be at least $3,000'
-                }
-            ],
-            taskResults: []
-        };
-
-        mockWorkflowEngine.execute.mockResolvedValueOnce(validationFailureResult);
-
         // Process the application
-        const result = await processLoanApplication(lowIncomeApplication);
+        const result = await processLoanApplication(lowIncomeApplication, logger);
 
         // Verify the result
         expect(result.success).toBe(false);
@@ -144,40 +107,46 @@ describe('Loan Approval Workflow', () => {
         expect(incomeValidation.message).toBe('Monthly income must be at least $3,000');
         result.validationResults.filter(vr => vr.rule.id !== 'income-validation').forEach(vr => expect(vr.success).toBe(true));
         expect(result.taskResults).toHaveLength(0);
+
+        // Verify logs for this workflow run
+        const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+        expect(logs.length).toBeGreaterThan(0);
     });
 
     it('should handle task execution failure', async () => {
-        // Mock workflow execution with task failure
-        const taskFailureResult = {
-            success: false,
-            context: { data: applicationData },
-            validationResults: [],
-            taskResults: [
-                {
-                    task: loanApprovalWorkflow.tasks[0],
-                    taskId: 'check-credit-history',
-                    success: false,
-                    error: 'Credit bureau service unavailable',
-                    metadata: {
-                        contextData: applicationData
-                    }
-                }
-            ],
-            error: 'Task execution failed'
-        };
+        // Temporarily modify the workflow to use an invalid URL
+        const originalTasks = [...loanApprovalWorkflow.tasks];
+        loanApprovalWorkflow.tasks[0].config.url = 'https://invalid-url-that-does-not-exist.com';
 
-        mockWorkflowEngine.execute.mockResolvedValueOnce(taskFailureResult);
+        try {
+            // Process the application
+            const result = await processLoanApplication(applicationData, logger);
 
-        // Process the application
-        const result = await processLoanApplication(applicationData);
+            // Verify the result
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Task execution failed');
+            expect(result.validationResults).toHaveLength(3);
+            result.validationResults.forEach(vr => expect(vr.success).toBe(true));
+            expect(result.taskResults.length).toBe(3);
+            expect(result.taskResults[0].success).toBe(false);
+            expect(result.taskResults[0].error).toMatch(/ENOTFOUND|ECONNREFUSED/);
+            expect(result.taskResults[1].success).toBe(true);
+            expect(result.taskResults[2].success).toBe(true);
 
-        // Verify the result
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('Task execution failed');
-        expect(result.taskResults).toHaveLength(3);
-        result.taskResults.forEach(tr => {
-            expect(tr.success).toBe(false);
-            expect(tr.error).toMatch(/ENOTFOUND/);
-        });
+            // Verify logs for this workflow run
+            const logs = await mongoClient.db(dbName).collection(collectionName).find({ workflowId: 'loan-approval' }).toArray();
+            expect(logs.length).toBeGreaterThan(0);
+        } finally {
+            // Restore the original tasks
+            loanApprovalWorkflow.tasks = originalTasks;
+        }
     });
-}); 
+});
+
+async function processLoanApplication(data: any, loggerOverride?: ILogger) {
+    const logger = loggerOverride || new DefaultLogger();
+    const validationExecutor = new ValidationExecutor(logger);
+    const baseEngine = new WorkflowEngine();
+    const workflowEngine = createDecoratedWorkflowEngine(baseEngine, logger, validationExecutor);
+    return workflowEngine.execute(loanApprovalWorkflow, data);
+} 

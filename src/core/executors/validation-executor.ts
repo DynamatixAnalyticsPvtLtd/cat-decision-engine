@@ -1,7 +1,7 @@
 import { ValidationRule } from '../types/validation-rule';
 import { ValidationResult, ValidationResultItem } from '../types/validation-result';
-import { ILogger } from '../interfaces/logger.interface';
 import { MongoLogger } from '../logging/mongo-logger';
+import { ILogger } from 'core/logging/logger.interface';
 
 export class ValidationExecutor {
     private logger: ILogger;
@@ -19,7 +19,7 @@ export class ValidationExecutor {
                 const isValid = await this.evaluateCondition(rule.condition, data);
                 if (!isValid) {
                     success = false;
-                    this.logger.warn('Validation failed', { rule, data });
+                    await this.logger.warn('Validation failed', { rule, data });
                 }
                 results.push({
                     rule,
@@ -33,9 +33,8 @@ export class ValidationExecutor {
                     success: false,
                     message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
                 });
-                this.logger.error('Validation error', { rule, error });
+                await this.logger.error('Validation error', { rule, error });
             }
-
         }
 
         return {
@@ -51,7 +50,7 @@ export class ValidationExecutor {
             const result = fn(data);
             return typeof result === 'boolean' ? result : false;
         } catch (error) {
-            this.logger.error('Error evaluating condition', { condition, error });
+            await this.logger.error('Error evaluating condition', { condition, error });
             throw error;
         }
     }

@@ -1,4 +1,4 @@
-import { ILogger } from './interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 import { DefaultLogger } from './logging/default-logger';
 import { TaskFactory } from '../tasks/factory/task.factory';
 import { TaskExecutor } from './executors/task-executor';
@@ -37,7 +37,7 @@ export class WorkflowEngine {
         }
 
         try {
-            this.logger.info(`Starting workflow execution: ${workflow.id}`, { workflow, data });
+            await this.logger.info(`Starting workflow execution: ${workflow.id}`, { workflow, data });
 
             const context: WorkflowContext = { data };
             const validationResults: ValidationResultItem[] = [];
@@ -80,11 +80,11 @@ export class WorkflowEngine {
                 taskResults
             };
 
-            this.logger.info(`Workflow completed successfully: ${workflow.id}`, { result });
+            await this.logger.info(`Workflow completed successfully: ${workflow.id}`, { result });
             return result;
 
         } catch (error) {
-            this.logger.error(`Workflow execution failed: ${workflow.id}`, { error });
+            await this.logger.error(`Workflow execution failed: ${workflow.id}`, { error });
             throw error instanceof WorkflowError ? error : new WorkflowError(
                 error instanceof Error ? error.message : 'Workflow execution failed',
                 'WORKFLOW_ERROR'

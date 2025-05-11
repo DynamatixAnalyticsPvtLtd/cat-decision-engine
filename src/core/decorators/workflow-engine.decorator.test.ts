@@ -7,7 +7,7 @@ import { ValidationRule } from '../types/validation-rule';
 import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';
 import { ValidationOnFail } from '../enums/validation.enum';
 import { WorkflowEngine } from '../workflow-engine';
-import { ILogger } from '../interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 
 jest.mock('../executors/validation-executor');
 

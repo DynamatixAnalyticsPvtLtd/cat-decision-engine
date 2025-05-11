@@ -1,4 +1,4 @@
-import { ILogger } from '../../core/interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 import { TaskType } from '../enums/task.enum';
 import { Task } from '../../core/types/task';
 import { TaskResult } from '../../core/types/task-result';

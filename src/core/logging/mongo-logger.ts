@@ -8,14 +8,15 @@ export class MongoLogger implements ILogger {
     private client: MongoClient;
     private collection!: Collection;
     private isConnected: boolean = false;
+    private connectionPromise: Promise<void>;
 
     constructor() {
-        const mongoUrl = process.env.MONGODB_URL;
+        const mongoUrl = process.env.MONGODB_URI;
         if (!mongoUrl) {
-            throw new Error('MONGODB_URL environment variable is not set');
+            throw new Error('MONGODB_URI environment variable is not set');
         }
         this.client = new MongoClient(mongoUrl);
-        this.connect();
+        this.connectionPromise = this.connect();
     }
 
     private async connect() {
@@ -23,9 +24,10 @@ export class MongoLogger implements ILogger {
             await this.client.connect();
             this.isConnected = true;
 
-            // Extract database name from URL
-            const dbName = this.client.db().databaseName;
-            this.collection = this.client.db(dbName).collection('workflow_logs');
+            const dbName = process.env.DB_NAME || 'workflow-engine';
+            const collectionName = process.env.COLLECTION_NAME || 'workflow_logs';
+
+            this.collection = this.client.db(dbName).collection(collectionName);
 
             // Create indexes for better query performance
             await this.collection.createIndex({ timestamp: -1 });
@@ -34,16 +36,20 @@ export class MongoLogger implements ILogger {
         } catch (error) {
             console.error('Failed to connect to MongoDB:', error);
             this.isConnected = false;
+            throw error;
+        }
+    }
+
+    private async ensureConnected() {
+        if (!this.isConnected) {
+            await this.connectionPromise;
         }
     }
 
     private async log(level: string, message: string, meta?: Record<string, any>): Promise<void> {
-        if (!this.isConnected) {
-            console.error('MongoDB not connected, falling back to console logging');
-            return;
-        }
-
         try {
+            await this.ensureConnected();
+
             const logEntry = {
                 level,
                 message,
@@ -62,34 +68,33 @@ export class MongoLogger implements ILogger {
             await this.collection.insertOne(logEntry);
         } catch (error) {
             console.error('Failed to write log to MongoDB:', error);
+            console.error('Falling back to console logging');
         }
     }
 
-    debug(message: string, meta?: Record<string, any>): void {
-        this.log('DEBUG', message, meta);
+    async debug(message: string, meta?: Record<string, any>): Promise<void> {
+        await this.log('DEBUG', message, meta);
         console.debug(`[DEBUG] ${message}`, meta || '');
     }
 
-    info(message: string, meta?: Record<string, any>): void {
-        this.log('INFO', message, meta);
+    async info(message: string, meta?: Record<string, any>): Promise<void> {
+        await this.log('INFO', message, meta);
         console.info(`[INFO] ${message}`, meta || '');
     }
 
-    warn(message: string, meta?: Record<string, any>): void {
-        this.log('WARN', message, meta);
+    async warn(message: string, meta?: Record<string, any>): Promise<void> {
+        await this.log('WARN', message, meta);
         console.warn(`[WARN] ${message}`, meta || '');
     }
 
-    error(message: string, meta?: Record<string, any>): void {
-        this.log('ERROR', message, meta);
+    async error(message: string, meta?: Record<string, any>): Promise<void> {
+        await this.log('ERROR', message, meta);
         console.error(`[ERROR] ${message}`, meta || '');
     }
 
     // Query methods for audit trail
     async getWorkflowLogs(workflowId: string, limit: number = 100): Promise<any[]> {
-        if (!this.isConnected) {
-            throw new Error('MongoDB not connected');
-        }
+        await this.ensureConnected();
         return this.collection.find({ workflowId })
             .sort({ timestamp: -1 })
             .limit(limit)
@@ -97,9 +102,7 @@ export class MongoLogger implements ILogger {
     }
 
     async getWorkflowStats(workflowId: string): Promise<any> {
-        if (!this.isConnected) {
-            throw new Error('MongoDB not connected');
-        }
+        await this.ensureConnected();
         return this.collection.aggregate([
             { $match: { workflowId } },
             {

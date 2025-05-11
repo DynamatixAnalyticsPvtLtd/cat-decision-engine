@@ -4,7 +4,7 @@ import { ITaskExecutor } from '../interfaces/task-executor.interface';
 import { TaskType } from '../enums/task.enum';
 import { TaskError } from '../errors/workflow-error';
 import { TaskFactory } from '../../tasks/factory/task.factory';
-import { ILogger } from '../interfaces/logger.interface';
+import { ILogger } from 'core/logging/logger.interface';
 import { MongoLogger } from '../logging/mongo-logger';
 
 export class TaskExecutor implements ITaskExecutor {
@@ -18,7 +18,7 @@ export class TaskExecutor implements ITaskExecutor {
 
     async execute(task: Task, context: WorkflowContext): Promise<TaskResult> {
         try {
-            this.logger.debug('Starting task execution', {
+            await this.logger.debug('Starting task execution', {
                 taskId: task.id,
                 type: task.type
             });
@@ -30,6 +30,13 @@ export class TaskExecutor implements ITaskExecutor {
 
             const output = await executor.execute(task, context);
 
+            // For API tasks, check if the response is successful
+            if (task.type === TaskType.API_CALL) {
+                if (output.statusCode >= 400) {
+                    throw new TaskError(`API request failed with status ${output.statusCode}`, 'API_ERROR');
+                }
+            }
+
             return {
                 task,
                 taskId: task.id,
@@ -40,7 +47,7 @@ export class TaskExecutor implements ITaskExecutor {
                 }
             };
         } catch (error) {
-            this.logger.error('Task execution failed', {
+            await this.logger.error('Task execution failed', {
                 taskId: task.id,
                 type: task.type,
                 error: error instanceof Error ? error.message : String(error)
@@ -71,7 +78,7 @@ export class TaskExecutor implements ITaskExecutor {
             }
 
             try {
-                this.logger.debug('Starting task execution', {
+                await this.logger.debug('Starting task execution', {
                     taskId: task.id,
                     type: task.type
                 });
@@ -82,6 +89,14 @@ export class TaskExecutor implements ITaskExecutor {
                 }
 
                 const output = await executor.execute(task, context);
+
+                // For API tasks, check if the response is successful
+                if (task.type === TaskType.API_CALL) {
+                    if (output.statusCode >= 400) {
+                        throw new TaskError(`API request failed with status ${output.statusCode}`, 'API_ERROR');
+                    }
+                }
+
                 results.push({
                     task,
                     taskId: task.id,
@@ -92,7 +107,7 @@ export class TaskExecutor implements ITaskExecutor {
                     }
                 });
             } catch (error) {
-                this.logger.error('Task execution failed', {
+                await this.logger.error('Task execution failed', {
                     taskId: task.id,
                     type: task.type,
                     error: error instanceof Error ? error.message : String(error)
