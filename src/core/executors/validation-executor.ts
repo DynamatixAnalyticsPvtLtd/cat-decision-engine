@@ -2,6 +2,7 @@ import { ValidationRule } from '../types/validation-rule';
 import { ValidationResult, ValidationResultItem } from '../types/validation-result';
 import { MongoLogger } from '../logging/mongo-logger';
 import { ILogger } from 'core/logging/logger.interface';
+import { WorkflowContext } from '../types/workflow-context';
 
 export class ValidationExecutor {
     private logger: ILogger;
@@ -10,7 +11,7 @@ export class ValidationExecutor {
         this.logger = logger || new MongoLogger();
     }
 
-    async execute(rules: ValidationRule[], data: any): Promise<ValidationResult> {
+    async execute(rules: ValidationRule[], data: any, context: WorkflowContext): Promise<ValidationResult> {
         const results: ValidationResultItem[] = [];
         let success = true;
 
@@ -20,6 +21,9 @@ export class ValidationExecutor {
                 if (!isValid) {
                     success = false;
                     await this.logger.error('Validation failed', {
+                        executionId: context.executionId,
+                        workflowId: context.workflowId,
+                        name: context.workflowName,
                         rule,
                         data,
                         status: 'failed',
@@ -38,7 +42,13 @@ export class ValidationExecutor {
                     success: false,
                     message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
                 });
-                await this.logger.error('Validation error', { rule, error });
+                await this.logger.error('Validation error', {
+                    executionId: context.executionId,
+                    workflowId: context.workflowId,
+                    name: context.workflowName,
+                    rule,
+                    error
+                });
             }
         }
 

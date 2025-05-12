@@ -66,7 +66,7 @@ export class WorkflowEngine {
             const taskResults: TaskResult[] = [];
 
             // Execute validations using ValidationExecutor
-            const validationResult = await this.validationExecutor.execute(workflow.validations, data);
+            const validationResult = await this.validationExecutor.execute(workflow.validations, data, context);
             validationResults.push(...validationResult.validationResults);
             if (!validationResult.success) {
                 result = {
