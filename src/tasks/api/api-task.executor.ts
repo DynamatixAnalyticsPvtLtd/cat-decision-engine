@@ -3,21 +3,31 @@ import { TaskType } from '../enums/task.enum';
 import { TaskError } from '../../core/errors/workflow-error';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
 import { ILogger } from 'core/logging/logger.interface';
+import { ExpressionEvaluator } from '../../core/utils/expression-evaluator';
 import axios, { AxiosRequestConfig } from 'axios';
 
 export class ApiTaskExecutor implements ITaskExecutor {
-    constructor(private readonly logger: ILogger) { }
+    private expressionEvaluator: ExpressionEvaluator;
+
+    constructor(private readonly logger: ILogger) {
+        this.expressionEvaluator = new ExpressionEvaluator();
+    }
 
     public async execute(task: Task, context: { data: any }): Promise<any> {
         if (!task.config.url) {
             throw new TaskError('URL is required for API tasks');
         }
 
+        // Resolve any template expressions in the request body
+        const resolvedBody = task.config.body ?
+            this.expressionEvaluator.evaluateObject(task.config.body, context.data) :
+            undefined;
+
         const config: AxiosRequestConfig = {
             url: task.config.url,
             method: task.config.method || 'GET',
             headers: task.config.headers,
-            data: task.config.body,
+            data: resolvedBody,
             timeout: task.config.timeout
         };
 
@@ -25,7 +35,8 @@ export class ApiTaskExecutor implements ITaskExecutor {
             await this.logger.debug('Executing API task', {
                 taskId: task.id,
                 url: config.url,
-                method: config.method
+                method: config.method,
+                body: resolvedBody
             });
 
             const response = await axios(config);

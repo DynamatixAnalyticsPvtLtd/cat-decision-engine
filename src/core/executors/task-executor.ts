@@ -97,7 +97,20 @@ export class TaskExecutor implements ITaskExecutor {
                     throw new TaskError(`Unsupported task type: ${task.type}`, '1');
                 }
 
-                const output = await executor.execute(task, context);
+                // Create a new context with accumulated results
+                const taskContext = {
+                    ...context,
+                    data: {
+                        ...context.data,
+                        // Add previous task results to the context
+                        ...results.reduce((acc, result) => ({
+                            ...acc,
+                            [result.taskId]: result.output
+                        }), {})
+                    }
+                };
+
+                const output = await executor.execute(task, taskContext);
 
                 // For API tasks, check if the response is successful
                 if (task.type === TaskType.API_CALL) {
@@ -106,15 +119,17 @@ export class TaskExecutor implements ITaskExecutor {
                     }
                 }
 
-                results.push({
+                const result = {
                     task,
                     taskId: task.id,
                     success: true,
                     output,
                     metadata: {
-                        contextData: context.data
+                        contextData: taskContext.data
                     }
-                });
+                };
+
+                results.push(result);
             } catch (error) {
                 await this.logger.error('Task execution failed', {
                     taskId: task.id,

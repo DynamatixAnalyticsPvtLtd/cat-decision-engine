@@ -211,6 +211,68 @@ async function initWorkflows() {
                         }
                     }
                 ]
+            },
+            // Sequential tasks workflow
+            {
+                id: 'sequential-tasks-workflow',
+                name: 'Sequential Tasks Workflow',
+                trigger: 'SequentialTasksUseCase.processTransaction',
+                validations: [
+                    {
+                        id: 'amount-validation',
+                        name: 'Amount Validation',
+                        condition: 'data.initialAmount > 0',
+                        message: 'Initial amount must be greater than 0',
+                        onFail: ValidationOnFail.STOP
+                    },
+                    {
+                        id: 'currency-validation',
+                        name: 'Currency Validation',
+                        condition: '["USD", "EUR", "GBP"].includes(data.currency)',
+                        message: 'Currency must be USD, EUR, or GBP',
+                        onFail: ValidationOnFail.STOP
+                    }
+                ],
+                tasks: [
+                    {
+                        id: 'calculatefee',
+                        name: 'Calculate Transaction Fee',
+                        type: TaskType.API_CALL,
+                        order: 1,
+                        config: {
+                            url: 'https://6821e583b342dce8004c404f.mockapi.io/api/catura-mock/fee/1',
+                            method: TaskMethod.GET,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            timeout: 5000,
+                            retries: 2,
+                            priority: TaskPriority.HIGH
+                        }
+                    },
+                    {
+                        id: 'processpayment',
+                        name: 'Process Payment',
+                        type: TaskType.API_CALL,
+                        order: 2,
+                        config: {
+                            url: 'https://6821e583b342dce8004c404f.mockapi.io/api/catura-mock/payment',
+                            method: TaskMethod.POST,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: {
+                                userName: '${userName}',
+                                amount: '${initialAmount}',
+                                fee: '${calculatefee.data.fee}',
+                                totalAmount: '${parseFloat(initialAmount) + parseFloat(calculatefee.data.fee)}'
+                            },
+                            timeout: 5000,
+                            retries: 2,
+                            priority: TaskPriority.HIGH
+                        }
+                    }
+                ]
             }
         ];
 
