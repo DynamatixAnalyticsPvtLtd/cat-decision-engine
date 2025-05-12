@@ -1,4 +1,4 @@
-# Workflow Engine Library
+# Catura Decision Engine Library
 
 A powerful Node.js library for building and executing configurable workflows with validation and task execution capabilities. This library provides a flexible way to intercept method calls, validate inputs, and execute ordered tasks based on configuration.
 
@@ -115,6 +115,48 @@ interface Workflow {
 > **Note**: The validation engine currently evaluates conditions using JavaScript expressions. While the system supports various validation types in its architecture (FIELD_CONDITION, REGEX_MATCH, CUSTOM_FUNCTION, COMPOSITE, EXTERNAL_API), only field conditions and regex matching are fully implemented in the current version. Additional validation types are planned for future releases.
 
 ### 3. Task Execution
+
+#### Task Result Passing
+Tasks in a workflow can access results from previous tasks. This is particularly useful for building complex workflows where each task builds upon the results of previous tasks.
+
+```json
+{
+    "id": "payment-processing-workflow",
+    "name": "Payment Processing Workflow",
+    "trigger": "PaymentService.processPayment",
+    "tasks": [
+        {
+            "id": "calculatefee",
+            "type": "api_call",
+            "order": 1,
+            "config": {
+                "url": "https://api.example.com/calculate-fee",
+                "method": "GET"
+            }
+        },
+        {
+            "id": "processpayment",
+            "type": "api_call",
+            "order": 2,
+            "config": {
+                "url": "https://api.example.com/process-payment",
+                "method": "POST",
+                "body": {
+                    "amount": "{{data.initialAmount}}",
+                    "fee": "{{calculatefee.output.data.fee}}",
+                    "totalAmount": "{{calculatefee.output.data.fee + data.initialAmount}}"
+                }
+            }
+        }
+    ]
+}
+```
+
+In this example:
+- The first task (`calculatefee`) calculates a fee for the payment
+- The second task (`processpayment`) uses the fee from the first task to calculate the total amount
+- Task results are automatically available in the context using the task ID as the key
+- You can access task results using the format `{{taskId.output.data.fieldName}}`
 
 #### API Task Configuration
 ```json
@@ -356,8 +398,11 @@ sequenceDiagram
     
     alt Validation Success
         Engine->>TaskExecutor: Execute Tasks
-        TaskExecutor->>MongoDB: Log Task Results
-        TaskExecutor-->>Engine: Task Results
+        loop For Each Task
+            TaskExecutor->>TaskExecutor: Create Context with Previous Results
+            TaskExecutor->>MongoDB: Log Task Results
+            TaskExecutor-->>Engine: Task Results
+        end
         Engine-->>Decorator: Workflow Result
         Decorator-->>Client: Original Method Result
     else Validation Failure
@@ -367,36 +412,47 @@ sequenceDiagram
     end
 ```
 
-## Contributing
+## Database Schema
 
-[Contributing guidelines to be added]
-
-## License
-
-[License information to be added]
-
-## Workflow Data Structure
-
-**Note:** The workflow engine passes the original input object directly to the workflow. This means that validation rules and tasks should reference fields directly, for example:
-
-```json
-{
-  "condition": "data.loanAmount > 0 && data.loanAmount <= 1000000"
-}
+### Workflow Collection
+```mermaid
+erDiagram
+    WORKFLOW {
+        ObjectId _id
+        string id
+        string name
+        string trigger
+        array validations
+        array tasks
+        date createdAt
+        date updatedAt
+    }
 ```
 
-There is no need to use `data.input.loanAmount` or any nested structure. The input object is available at the root level as `data` in all validation conditions and task templates.
+### Workflow Logs Collection
+```mermaid
+erDiagram
+    WORKFLOW_LOG {
+        ObjectId _id
+        string level
+        string message
+        object metadata
+        date timestamp
+        string workflowId
+        string workflowName
+        string executionId
+        string status
+        number duration
+        array validationResults
+        array taskResults
+        string error
+    }
+```
 
-## Usage Example
+### Indexes
+- `workflow_logs`: 
+  - `{ timestamp: -1 }`
+  - `{ workflowId: 1 }`
+  - `{ level: 1 }`
+  - `{ executionId: 1 }`
 
-When defining validation rules in your workflow configuration, reference fields directly:
-
-```json
-{
-  "id": "loan-amount-validation",
-  "name": "Loan Amount Validation",
-  "condition": "data.loanAmount > 0 && data.loanAmount <= 1000000",
-  "message": "Loan amount must be between 1 and 1,000,000",
-  "onFail": "stop"
-}
-``` 
