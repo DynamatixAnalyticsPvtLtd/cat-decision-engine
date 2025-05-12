@@ -170,6 +170,142 @@ const failedExecutions = await workflowStore.findLogs({
 });
 ```
 
+### 5. Dynamic Forms Integration
+
+The workflow engine can be used to handle dynamic form submissions with different entity types. This is particularly useful for applications that need to process various types of forms (loans, insurance, mortgages, etc.) with different validation rules and workflows.
+
+#### Form Handler Implementation
+```typescript
+import { WorkflowMethod } from '@your-org/workflow-engine';
+
+export class DynamicFormUseCase {
+    constructor(
+        private readonly entityType: string // e.g., 'loan', 'insurance', 'mortgage'
+    ) { }
+
+    @WorkflowMethod()
+    async processForm(data: any) {
+        // The decorator will:
+        // 1. Get the workflow from MongoDB using the class, method name, and entityType as trigger
+        // 2. Execute the workflow (validations and tasks)
+        // 3. Only call this method if the workflow succeeds
+        return {
+            success: true,
+            data: {
+                ...data,
+                entityType: this.entityType,
+                status: 'PROCESSED',
+                message: `${this.entityType} form processed successfully`
+            }
+        };
+    }
+}
+```
+
+#### Form Processing Client
+```typescript
+export async function handleFormSubmission(entityType: string, formData: any) {
+    try {
+        // Create form handler for the specific entity type
+        const formHandler = new DynamicFormUseCase(entityType);
+
+        // Process the form
+        const result = await formHandler.processForm(formData);
+
+        return {
+            success: true,
+            data: result.data
+        };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+```
+
+#### Example Form Types
+1. **Loan Application**
+```typescript
+const loanData = {
+    applicantName: 'John Doe',
+    loanAmount: 50000,
+    employmentStatus: 'employed',
+    annualIncome: 75000,
+    email: 'john.doe@example.com'
+};
+
+const result = await handleFormSubmission('loan', loanData);
+```
+
+2. **Insurance Application**
+```typescript
+const insuranceData = {
+    policyHolder: 'Jane Smith',
+    coverageType: 'health',
+    age: 35,
+    preExistingConditions: false,
+    email: 'jane.smith@example.com'
+};
+
+const result = await handleFormSubmission('insurance', insuranceData);
+```
+
+3. **Mortgage Application**
+```typescript
+const mortgageData = {
+    propertyValue: 300000,
+    downPayment: 60000,
+    creditScore: 720,
+    employmentHistory: '5 years',
+    email: 'mortgage.buyer@example.com'
+};
+
+const result = await handleFormSubmission('mortgage', mortgageData);
+```
+
+#### Workflow Configuration for Dynamic Forms
+```json
+{
+    "id": "loan-application-workflow",
+    "name": "Loan Application Processing",
+    "trigger": "DynamicFormUseCase.processForm.loan",
+    "validations": [
+        {
+            "id": "loan-amount",
+            "name": "Minimum Loan Amount",
+            "condition": "data.loanAmount >= 10000",
+            "message": "Loan amount must be at least $10,000",
+            "onFail": "stop"
+        },
+        {
+            "id": "income-verification",
+            "name": "Income Verification",
+            "condition": "data.annualIncome >= 50000",
+            "message": "Annual income must be at least $50,000",
+            "onFail": "stop"
+        }
+    ],
+    "tasks": [
+        {
+            "id": "notify-loan-officer",
+            "type": "api_call",
+            "config": {
+                "url": "https://api.example.com/notify-loan-officer",
+                "method": "POST",
+                "body": {
+                    "applicantName": "{{data.applicantName}}",
+                    "loanAmount": "{{data.loanAmount}}"
+                }
+            }
+        }
+    ]
+}
+```
+
+> **Note**: The workflow trigger includes the entity type (`DynamicFormUseCase.processForm.loan`), allowing different workflows for different form types.
+
 ## Limitations
 
 1. **Task Types**: Currently limited to API calls
@@ -237,4 +373,30 @@ sequenceDiagram
 
 ## License
 
-[License information to be added] 
+[License information to be added]
+
+## Workflow Data Structure
+
+**Note:** The workflow engine passes the original input object directly to the workflow. This means that validation rules and tasks should reference fields directly, for example:
+
+```json
+{
+  "condition": "data.loanAmount > 0 && data.loanAmount <= 1000000"
+}
+```
+
+There is no need to use `data.input.loanAmount` or any nested structure. The input object is available at the root level as `data` in all validation conditions and task templates.
+
+## Usage Example
+
+When defining validation rules in your workflow configuration, reference fields directly:
+
+```json
+{
+  "id": "loan-amount-validation",
+  "name": "Loan Amount Validation",
+  "condition": "data.loanAmount > 0 && data.loanAmount <= 1000000",
+  "message": "Loan amount must be between 1 and 1,000,000",
+  "onFail": "stop"
+}
+``` 

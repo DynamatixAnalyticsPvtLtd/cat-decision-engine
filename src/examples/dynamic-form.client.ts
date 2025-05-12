@@ -19,13 +19,6 @@ export async function processLoanForm(testData?: any): Promise<FormResponse> {
         email: 'john.doe@example.com'
     };
 
-    if (loanData.loanAmount < 10000) {
-        return {
-            success: false,
-            error: 'Loan amount must be at least $10,000'
-        };
-    }
-
     return handleFormSubmission('loan', loanData);
 }
 

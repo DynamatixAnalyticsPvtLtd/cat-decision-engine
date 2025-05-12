@@ -25,19 +25,27 @@ describe('Dynamic Form Client Integration Tests', () => {
         await client.close();
     });
 
-
-
     describe('Loan Form Processing', () => {
         beforeEach(async () => {
             // Clear logs for loan workflow before each test
             await logsCollection.deleteMany({ workflowId: 'loan-form-workflow' });
         });
+
         it('should process loan form successfully', async () => {
             // Record start time before triggering workflow
             const startTime = new Date();
 
+            // Test with valid loan data
+            const validLoanData = {
+                applicantName: 'John Doe',
+                loanAmount: 50000, // Valid: between 1 and 1,000,000
+                employmentStatus: 'employed', // Valid: must be "employed"
+                annualIncome: 75000, // Valid: >= 30,000
+                email: 'john.doe@example.com'
+            };
+
             // Trigger the workflow
-            await processLoanForm();
+            await processLoanForm(validLoanData);
 
             // Wait for logs to be written and verify workflow execution
             let logs: any[] = [];
@@ -46,11 +54,13 @@ describe('Dynamic Form Client Integration Tests', () => {
                     workflowId: 'loan-form-workflow',
                     timestamp: { $gte: startTime }
                 }).toArray();
+                console.log('Found logs:', JSON.stringify(logs, null, 2));
                 if (logs.some((log: any) => log.status === 'completed')) break;
                 await new Promise(res => setTimeout(res, 1000));
             }
 
             // Verify workflow execution through logs
+            console.log('Found logs:', JSON.stringify(logs, null, 2));
             expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and completed
             expect(logs.some((log: any) => log.status === 'started')).toBe(true);
             expect(logs.some((log: any) => log.status === 'completed')).toBe(true);
@@ -70,7 +80,7 @@ describe('Dynamic Form Client Integration Tests', () => {
             // Test with invalid loan amount
             const invalidLoanData = {
                 applicantName: 'John Doe',
-                loanAmount: 2000000, // Invalid amount
+                loanAmount: 2000000, // Invalid: exceeds 1,000,000
                 employmentStatus: 'employed',
                 annualIncome: 75000,
                 email: 'john.doe@example.com'
@@ -89,8 +99,6 @@ describe('Dynamic Form Client Integration Tests', () => {
                 await new Promise(res => setTimeout(res, 1000));
             }
 
-            console.log('Found logs:', JSON.stringify(logs, null, 2));
-
             // Verify workflow execution through logs
             expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and failed
             expect(logs.some((log: any) => log.status === 'started')).toBe(true);
@@ -108,8 +116,17 @@ describe('Dynamic Form Client Integration Tests', () => {
             // Record start time before triggering workflow
             const startTime = new Date();
 
+            // Test with valid insurance data
+            const validInsuranceData = {
+                policyHolder: 'Jane Smith',
+                coverageType: 'health', // Valid: one of ["health", "life", "auto"]
+                age: 35, // Valid: between 18 and 65
+                preExistingConditions: false,
+                email: 'jane.smith@example.com'
+            };
+
             // Trigger the workflow
-            await processInsuranceForm();
+            await processInsuranceForm(validInsuranceData);
 
             // Wait for logs to be written and verify workflow execution
             let logs: any[] = [];
@@ -142,7 +159,7 @@ describe('Dynamic Form Client Integration Tests', () => {
             // Test with invalid coverage type
             const invalidInsuranceData = {
                 policyHolder: 'Jane Smith',
-                coverageType: 'invalid', // Invalid coverage type
+                coverageType: 'invalid', // Invalid: not in ["health", "life", "auto"]
                 age: 35,
                 preExistingConditions: false,
                 email: 'jane.smith@example.com'
@@ -175,8 +192,17 @@ describe('Dynamic Form Client Integration Tests', () => {
             // Record start time before triggering workflow
             const startTime = new Date();
 
+            // Test with valid mortgage data
+            const validMortgageData = {
+                propertyValue: 300000, // Valid: between 50,000 and 2,000,000
+                downPayment: 60000, // Valid: 20% of property value (300,000 * 0.2 = 60,000)
+                creditScore: 720, // Valid: >= 620
+                employmentHistory: '5 years',
+                email: 'mortgage.buyer@example.com'
+            };
+
             // Trigger the workflow
-            await processMortgageForm();
+            await processMortgageForm(validMortgageData);
 
             // Wait for logs to be written and verify workflow execution
             let logs: any[] = [];
@@ -208,7 +234,7 @@ describe('Dynamic Form Client Integration Tests', () => {
 
             // Test with invalid property value
             const invalidMortgageData = {
-                propertyValue: 2000010, // Invalid property value
+                propertyValue: 2000010, // Invalid: exceeds 2,000,000
                 downPayment: 60000,
                 creditScore: 720,
                 employmentHistory: '5 years',
