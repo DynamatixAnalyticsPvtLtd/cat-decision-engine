@@ -38,13 +38,6 @@ export async function processInsuranceForm(testData?: any): Promise<FormResponse
         email: 'jane.smith@example.com'
     };
 
-    if (!['health', 'life', 'auto'].includes(insuranceData.coverageType)) {
-        return {
-            success: false,
-            error: 'Invalid coverage type'
-        };
-    }
-
     return handleFormSubmission('insurance', insuranceData);
 }
 
@@ -56,13 +49,6 @@ export async function processMortgageForm(testData?: any): Promise<FormResponse>
         employmentHistory: '5 years',
         email: 'mortgage.buyer@example.com'
     };
-
-    if (mortgageData.propertyValue < 100000) {
-        return {
-            success: false,
-            error: 'Property value must be at least $100,000'
-        };
-    }
 
     return handleFormSubmission('mortgage', mortgageData);
 }

@@ -19,7 +19,12 @@ export class ValidationExecutor {
                 const isValid = await this.evaluateCondition(rule.condition, data);
                 if (!isValid) {
                     success = false;
-                    await this.logger.warn('Validation failed', { rule, data });
+                    await this.logger.error('Validation failed', {
+                        rule,
+                        data,
+                        status: 'failed',
+                        message: rule.message
+                    });
                 }
                 results.push({
                     rule,

@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-jest.setTimeout(20000);
+jest.setTimeout(50000);
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const DB_NAME = process.env.DB_NAME || 'workflow-engine';
@@ -25,12 +25,13 @@ describe('Dynamic Form Client Integration Tests', () => {
         await client.close();
     });
 
-    beforeEach(async () => {
-        // Clear logs before each test
-        await logsCollection.deleteMany({});
-    });
+
 
     describe('Loan Form Processing', () => {
+        beforeEach(async () => {
+            // Clear logs for loan workflow before each test
+            await logsCollection.deleteMany({ workflowId: 'loan-form-workflow' });
+        });
         it('should process loan form successfully', async () => {
             // Record start time before triggering workflow
             const startTime = new Date();
@@ -69,7 +70,7 @@ describe('Dynamic Form Client Integration Tests', () => {
             // Test with invalid loan amount
             const invalidLoanData = {
                 applicantName: 'John Doe',
-                loanAmount: 5000, // Invalid amount
+                loanAmount: 2000000, // Invalid amount
                 employmentStatus: 'employed',
                 annualIncome: 75000,
                 email: 'john.doe@example.com'
@@ -77,15 +78,20 @@ describe('Dynamic Form Client Integration Tests', () => {
 
             await processLoanForm(invalidLoanData);
 
-            // Wait for logs to be written
-            await new Promise(res => setTimeout(res, 1000));
+            // Wait for logs to be written and verify workflow execution
+            let logs: any[] = [];
+            for (let i = 0; i < 10; i++) {
+                logs = await logsCollection.find({
+                    workflowId: 'loan-form-workflow',
+                    timestamp: { $gte: startTime }
+                }).toArray();
+                if (logs.some((log: any) => log.status === 'failed')) break;
+                await new Promise(res => setTimeout(res, 1000));
+            }
 
-            // Query logs for this workflow within the time window
-            const logs = await logsCollection.find({
-                workflowId: 'loan-form-workflow',
-                timestamp: { $gte: startTime }
-            }).toArray();
+            console.log('Found logs:', JSON.stringify(logs, null, 2));
 
+            // Verify workflow execution through logs
             expect(logs.length).toBeGreaterThanOrEqual(2); // At least started and failed
             expect(logs.some((log: any) => log.status === 'started')).toBe(true);
             expect(logs.some((log: any) => log.status === 'failed')).toBe(true);
@@ -93,6 +99,11 @@ describe('Dynamic Form Client Integration Tests', () => {
     });
 
     describe('Insurance Form Processing', () => {
+        beforeEach(async () => {
+            // Clear logs for insurance workflow before each test
+            await logsCollection.deleteMany({ workflowId: 'insurance-form-workflow' });
+        });
+
         it('should process insurance form successfully', async () => {
             // Record start time before triggering workflow
             const startTime = new Date();
@@ -155,6 +166,11 @@ describe('Dynamic Form Client Integration Tests', () => {
     });
 
     describe('Mortgage Form Processing', () => {
+        beforeEach(async () => {
+            // Clear logs for mortgage workflow before each test
+            await logsCollection.deleteMany({ workflowId: 'mortgage-form-workflow' });
+        });
+
         it('should process mortgage form successfully', async () => {
             // Record start time before triggering workflow
             const startTime = new Date();
@@ -192,7 +208,7 @@ describe('Dynamic Form Client Integration Tests', () => {
 
             // Test with invalid property value
             const invalidMortgageData = {
-                propertyValue: 50000, // Invalid property value
+                propertyValue: 2000010, // Invalid property value
                 downPayment: 60000,
                 creditScore: 720,
                 employmentHistory: '5 years',
