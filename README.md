@@ -374,29 +374,3 @@ sequenceDiagram
 ## License
 
 [License information to be added]
-
-## Workflow Data Structure
-
-**Note:** The workflow engine passes the original input object directly to the workflow. This means that validation rules and tasks should reference fields directly, for example:
-
-```json
-{
-  "condition": "data.loanAmount > 0 && data.loanAmount <= 1000000"
-}
-```
-
-There is no need to use `data.input.loanAmount` or any nested structure. The input object is available at the root level as `data` in all validation conditions and task templates.
-
-## Usage Example
-
-When defining validation rules in your workflow configuration, reference fields directly:
-
-```json
-{
-  "id": "loan-amount-validation",
-  "name": "Loan Amount Validation",
-  "condition": "data.loanAmount > 0 && data.loanAmount <= 1000000",
-  "message": "Loan amount must be between 1 and 1,000,000",
-  "onFail": "stop"
-}
-``` 
