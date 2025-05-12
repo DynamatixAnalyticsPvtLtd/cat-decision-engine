@@ -1,4 +1,4 @@
-# Workflow Engine Library
+# Catura Decision Engine Library
 
 A powerful Node.js library for building and executing configurable workflows with validation and task execution capabilities. This library provides a flexible way to intercept method calls, validate inputs, and execute ordered tasks based on configuration.
 
