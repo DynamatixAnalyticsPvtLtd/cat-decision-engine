@@ -14,14 +14,14 @@ A powerful Node.js library for building and executing configurable workflows wit
 ## Installation
 
 ```bash
-npm install @your-org/workflow-engine
+npm install @dynamatix/cat-decision-engine
 ```
 
 ## Quick Start
 
 1. **Decorate your method**:
 ```typescript
-import { WorkflowMethod } from '@your-org/workflow-engine';
+import { WorkflowMethod } from '@dynamatix/cat-decision-engine';
 
 class UserService {
     @WorkflowMethod()
