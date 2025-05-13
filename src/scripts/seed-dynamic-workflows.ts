@@ -1,7 +1,7 @@
 import { MongoClient } from 'mongodb';
 import { Workflow } from '../core/types/workflow';
-import { TaskType, TaskMethod } from '../core/enums/task.enum';
-import { ValidationOnFail } from '../core/enums/validation.enum';
+import { TaskType, TaskMethod } from 'tasks/enums/task.enum';
+import { ValidationOnFail } from 'core/enums/validation.enum';
 import dotenv from 'dotenv';
 
 // Load environment variables

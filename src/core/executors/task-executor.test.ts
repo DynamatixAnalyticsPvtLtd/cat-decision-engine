@@ -1,9 +1,9 @@
 import { TaskExecutor } from './task-executor';
 import { Task, WorkflowContext } from '../types';
-import { TaskResult } from '../types/task-result';
-import { TaskType, TaskMethod } from '../enums/task.enum';
 import { TaskError } from '../errors/workflow-error';
 import { TaskFactory } from '../../tasks/factory/task.factory';
+import { TaskMethod } from 'tasks/enums/task.enum';
+import { TaskType } from 'tasks/enums/task.enum';
 
 jest.mock('../../tasks/factory/task.factory');
 

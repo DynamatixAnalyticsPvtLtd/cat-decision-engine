@@ -1,7 +1,7 @@
 import { Task, WorkflowContext } from '../types';
 import { TaskResult } from '../types/task-result';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
-import { TaskType } from '../enums/task.enum';
+import { TaskType } from 'tasks/enums/task.enum';
 import { TaskError } from '../errors/workflow-error';
 import { TaskFactory } from '../../tasks/factory/task.factory';
 import { ILogger } from 'core/logging/logger.interface';

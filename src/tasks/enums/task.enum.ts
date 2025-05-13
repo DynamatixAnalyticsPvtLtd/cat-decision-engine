@@ -5,7 +5,8 @@ export enum TaskType {
     FILE_OPERATION = 'file_operation',
     CUSTOM_FUNCTION = 'custom_function',
     WEBHOOK = 'webhook',
-    CONDITIONAL = 'conditional'
+    CONDITIONAL = 'conditional',
+    ALERT = 'alert'
 }
 
 export enum TaskMethod {

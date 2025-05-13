@@ -3,7 +3,7 @@ import { Task } from './types/task';
 import { TaskExecutor } from './executors/task-executor';
 import { DefaultLogger } from './logging/default-logger';
 import { TaskResult } from './types/task-result';
-import { TaskType, TaskMethod } from './enums/task.enum';
+import { TaskType, TaskMethod } from 'tasks/enums/task.enum';
 
 describe('WorkflowEngine Task Execution', () => {
     let workflowEngine: WorkflowEngine;
