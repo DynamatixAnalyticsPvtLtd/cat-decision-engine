@@ -41,7 +41,13 @@ export class WorkflowEngine {
         const executionId = uuidv4();
         let result: WorkflowResult = {
             success: false,
-            context: { data },
+            context: { 
+                data,
+                workflowId: workflow?.id || '',
+                workflowName: workflow?.name || '',
+                executionId,
+                validationResults: []
+            },
             validationResults: [],
             taskResults: [],
             executionId
@@ -61,7 +67,8 @@ export class WorkflowEngine {
                 data,
                 workflowId: workflow.id,
                 workflowName: workflow.name,
-                executionId
+                executionId,
+                validationResults: []
             };
             const validationResults: ValidationResultItem[] = [];
             const taskResults: TaskResult[] = [];
@@ -69,6 +76,9 @@ export class WorkflowEngine {
             // Execute validations using ValidationExecutor
             const validationResult = await this.validationExecutor.execute(workflow.validations, data, context);
             validationResults.push(...validationResult.validationResults);
+            
+            // Update context with validation results
+            context.validationResults = validationResult.validationResults;
             
             // Execute tasks using TaskExecutor
             if (workflow.tasks && workflow.tasks.length > 0) {

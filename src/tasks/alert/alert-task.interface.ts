@@ -1,6 +1,6 @@
 import { Task } from '../../core/types/task';
 import { TaskType } from '../enums/task.enum';
-import { Alert } from '../../../features/alert/interfaces/alert.interface';
+import { Alert } from '../../features/alert/interfaces/alert.interface';
 
 export interface AlertTaskConfig {
     source: string;
@@ -10,6 +10,7 @@ export interface AlertTaskConfig {
     category?: string;
     isActive: boolean;
     status: Alert['status'];
+    validationId?: string;  // ID of the validation that triggers this alert
 }
 
 export interface AlertTask extends Task {

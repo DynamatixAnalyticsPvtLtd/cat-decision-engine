@@ -6,6 +6,9 @@ import { IAlertEngine } from '../interfaces/alert.interface';
 import { AlertEngine } from '../../alert/alert-engine';
 import { ILogger } from '../../../core/logging/logger.interface';
 import { MongoLogger } from '../../../core/logging/mongo-logger';
+import { AlertTask } from '../../../tasks/alert/alert-task.interface';
+import { ValidationResultItem } from '../../../core/types/validation-result';
+import { TaskType } from '../../../tasks/enums/task.enum';
 
 export class AlertTaskExecutor implements ITaskExecutor {
     private alertEngine: IAlertEngine;
@@ -25,8 +28,84 @@ export class AlertTaskExecutor implements ITaskExecutor {
                 executionId: context.executionId
             });
 
-            // Extract alert configuration from task config
-            const { source, sourceId, alertMessage, isActive, status, category } = task.config;
+            // Check if this is an alert task
+            if (task.type !== TaskType.ALERT) {
+                throw new Error('Task is not an alert task');
+            }
+
+            const alertTask = task as AlertTask;
+            const { source, sourceId, alertMessage, isActive, status, category, validationId } = alertTask.config;
+            // console.log("ValidationID" , validationId);
+            
+            // If no validationId is provided, skip the alert
+            if (!validationId) {
+                await this.logger.info('Skipping alert task - no validationId provided', {
+                    taskId: task.id,
+                    workflowId: context.workflowId,
+                    workflowName: context.workflowName,
+                    executionId: context.executionId
+                });
+
+                return {
+                    task,
+                    taskId: task.id,
+                    success: true,
+                    output: null,
+                    metadata: {
+                        contextData: context.data,
+                        skipped: true,
+                        reason: 'No validationId provided'
+                    }
+                };
+            }
+
+            // Check if the corresponding validation failed
+            if (!context.validationResults) {
+                await this.logger.info('Skipping alert task - no validation results available', {
+                    taskId: task.id,
+                    validationId,
+                    workflowId: context.workflowId,
+                    workflowName: context.workflowName,
+                    executionId: context.executionId
+                });
+
+                return {
+                    task,
+                    taskId: task.id,
+                    success: true,
+                    output: null,
+                    metadata: {
+                        contextData: context.data,
+                        skipped: true,
+                        reason: 'No validation results available'
+                    }
+                };
+            }
+
+            const validationResult = context.validationResults.find((vr: ValidationResultItem) => vr.rule.id === validationId);
+            
+            // Skip alert if validation passed or validation result not found
+            if (!validationResult || validationResult.success) {
+                await this.logger.info('Skipping alert task - validation passed or not found', {
+                    taskId: task.id,
+                    validationId,
+                    workflowId: context.workflowId,
+                    workflowName: context.workflowName,
+                    executionId: context.executionId
+                });
+
+                return {
+                    task,
+                    taskId: task.id,
+                    success: true,
+                    output: null,
+                    metadata: {
+                        contextData: context.data,
+                        skipped: true,
+                        reason: 'Validation passed or not found'
+                    }
+                };
+            }
 
             // Create alert using the alert engine
             const alert = await this.alertEngine.raiseAlert({

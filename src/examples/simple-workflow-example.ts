@@ -59,12 +59,12 @@ async function runExample() {
         // console.log('Workflow result:', result);
         
         // This will fail validation
-        // const invalidResult = await workflow.processData({ name: '' });
-        const result = await sequentialTasksUseCase.processTransaction({
-            userName: 'John',
-            initialAmount: 1000,
-            currency: 'INR'
-        });
+        const result = await workflow.processData({ name: 'Shriram' });
+        // const result = await sequentialTasksUseCase.processTransaction({
+        //     userName: 'John',
+        //     initialAmount: 1000,
+        //     currency: 'INR'
+        // });
         console.log('Invalid result:', result);
     } catch (error) {
         console.error('Error:', error);
