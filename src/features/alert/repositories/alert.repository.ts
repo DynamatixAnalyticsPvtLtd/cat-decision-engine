@@ -1,6 +1,5 @@
-import { Alert, IAlertEngine } from '../interfaces/alert.interface';
+import { Alert, IAlertEngine } from '../../../tasks/alert/alert.interface';
 import { AlertModel, AlertDocument } from '../models/alert.model';
-import { initMongooseConnection } from '../../../core/config/mongoose-connection';
 
 export class AlertRepository implements IAlertEngine {
     async raiseAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Promise<Alert> {

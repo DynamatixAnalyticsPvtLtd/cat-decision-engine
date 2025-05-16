@@ -6,7 +6,7 @@ import { TaskError } from '../../core/errors/workflow-error';
 import { ApiTaskExecutor } from '../api/api-task.executor';
 import { TaskValidationService } from '../../core/services/task-validation.service';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
-import { AlertTaskExecutor } from '../../features/alert/executors/alert-task-executor';
+import { AlertTaskExecutor } from '../alert/alert-task-executor';
 
 export class TaskFactory {
     private taskExecutors: Map<TaskType, ITaskExecutor>;

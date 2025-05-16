@@ -1,15 +1,15 @@
-import { ITaskExecutor } from '../../../core/interfaces/task-executor.interface';
-import { Task } from '../../../core/types/task';
-import { WorkflowContext } from '../../../core/types/workflow-context';
-import { TaskResult } from '../../../core/types/task-result';
-import { IAlertEngine } from '../interfaces/alert.interface';
-import { AlertService } from '../services/alert.service';
-import { AlertRepository } from '../repositories/alert.repository';
-import { ILogger } from '../../../core/logging/logger.interface';
-import { MongoLogger } from '../../../core/logging/mongo-logger';
-import { AlertTask } from '../interfaces/alert.interface';
-import { ValidationResultItem } from '../../../core/types/validation-result';
-import { TaskType } from '../../../tasks/enums/task.enum';
+import { ITaskExecutor } from '../../core/interfaces/task-executor.interface';
+import { Task } from '../../core/types/task';
+import { WorkflowContext } from '../../core/types/workflow-context';
+import { TaskResult } from '../../core/types/task-result';
+import { IAlertEngine } from './alert.interface';
+import { AlertService } from '../../features/alert/services/alert.service';
+import { AlertRepository } from '../../features/alert/repositories/alert.repository';
+import { ILogger } from '../../core/logging/logger.interface';
+import { MongoLogger } from '../../core/logging/mongo-logger';
+import { AlertTask } from './alert.interface';
+import { ValidationResultItem } from '../../core/types/validation-result';
+import { TaskType } from '../enums/task.enum';
 import { Types } from 'mongoose';
 
 export class AlertTaskExecutor implements ITaskExecutor {

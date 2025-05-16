@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
-import { Task } from '../../../core/types/task';
-import { TaskType } from '../../../tasks/enums/task.enum';
+import { Task } from '../../core/types/task';
+import { TaskType } from '../enums/task.enum';
 
 
 export interface Alert {
