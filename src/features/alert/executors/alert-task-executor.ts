@@ -9,6 +9,7 @@ import { MongoLogger } from '../../../core/logging/mongo-logger';
 import { AlertTask } from '../../../tasks/alert/alert-task.interface';
 import { ValidationResultItem } from '../../../core/types/validation-result';
 import { TaskType } from '../../../tasks/enums/task.enum';
+import { ObjectId } from 'mongodb';
 
 export class AlertTaskExecutor implements ITaskExecutor {
     private alertEngine: IAlertEngine;
@@ -17,6 +18,35 @@ export class AlertTaskExecutor implements ITaskExecutor {
     constructor(logger?: ILogger) {
         this.logger = logger || new MongoLogger();
         this.alertEngine = new AlertEngine();
+    }
+
+    private processTemplate(template: string, data: any): string {
+        // First replace any ${...} patterns with their values
+        return template.replace(/\${([^}]+)}/g, (match, key) => {
+            // Trim the key to remove any whitespace
+            const trimmedKey = key.trim();
+            
+            // Handle both data.property and direct property access
+            let value;
+            if (trimmedKey.startsWith('data.')) {
+                // If key starts with 'data.', remove it and look in data object
+                const actualKey = trimmedKey.substring(5); // Remove 'data.'
+                value = actualKey.split('.').reduce((obj: any, k: string) => obj?.[k], data);
+            } else {
+                // Direct property access
+                value = trimmedKey.split('.').reduce((obj: any, k: string) => obj?.[k], data);
+            }
+            
+            // If value is undefined or null, return the original match
+            return value !== undefined && value !== null ? value : match;
+        });
+    }
+
+    private validateObjectId(id: string): ObjectId {
+        if (!ObjectId.isValid(id)) {
+            throw new Error(`SourceId '${id}' is not a valid MongoDB ObjectId`);
+        }
+        return new ObjectId(id);
     }
 
     async execute(task: Task, context: WorkflowContext): Promise<TaskResult> {
@@ -107,11 +137,19 @@ export class AlertTaskExecutor implements ITaskExecutor {
                 };
             }
 
-            // Create alert using the alert engine
+            // Process templates in source and alertMessage
+            const processedSource = this.processTemplate(source, context.data);
+            const processedAlertMessage = this.processTemplate(alertMessage, context.data);
+            const processedSourceId = this.processTemplate(sourceId, context.data);
+            
+            // Validate that sourceId is a valid ObjectId and get the actual ObjectId
+            const validatedSourceId = this.validateObjectId(processedSourceId);
+
+            // Create alert using the alert engine with the actual ObjectId
             const alert = await this.alertEngine.raiseAlert({
-                source,
-                sourceId,
-                alertMessage,
+                source: processedSource,
+                sourceId: validatedSourceId, // This is now an actual ObjectId
+                alertMessage: processedAlertMessage,
                 isActive,
                 status,
                 category

@@ -39,7 +39,7 @@ export const simpleWorkflowConfig: Workflow = {
 // The class that uses the workflow
 export class SimpleWorkflow {
     @WorkflowMethod()
-    async processData(data: { name: string }) {
+    async processData(data: any) {
         // This method will:
         // 1. Run the name validation
         // 2. If validation passes, create an alert
@@ -59,7 +59,7 @@ async function runExample() {
         // console.log('Workflow result:', result);
         
         // This will fail validation
-        const result = await workflow.processData({ name: 'Shriram' });
+        const result = await workflow.processData({ _id : "68231dee3ba9a075d68f5692" , name : '' });
         // const result = await sequentialTasksUseCase.processTransaction({
         //     userName: 'John',
         //     initialAmount: 1000,

@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 import { Alert } from '../interfaces/alert.interface';
 
 export interface AlertDocument extends Omit<Alert, 'id'>, Document {
@@ -12,7 +12,7 @@ const alertSchema = new Schema<AlertDocument>({
         index: true
     },
     sourceId: {
-        type: String,
+        type: Schema.Types.ObjectId,
         required: true,
         index: true
     },

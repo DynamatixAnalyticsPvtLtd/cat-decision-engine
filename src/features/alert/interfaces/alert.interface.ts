@@ -1,7 +1,9 @@
+import { Types } from 'mongoose';
+
 export interface Alert {
     id: string;
     source: string;
-    sourceId: string;
+    sourceId: Types.ObjectId;
     alertMessage: string;
     category?: string;
     isActive: boolean;
