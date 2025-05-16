@@ -3,6 +3,7 @@ import { ValidationResult, ValidationResultItem } from '../types/validation-resu
 import { MongoLogger } from '../logging/mongo-logger';
 import { ILogger } from 'core/logging/logger.interface';
 import { WorkflowContext } from '../types/workflow-context';
+import { ValidationOnFail } from '../enums/validation.enum';
 
 export class ValidationExecutor {
     private logger: ILogger;
@@ -29,11 +30,20 @@ export class ValidationExecutor {
                         status: 'failed',
                         message: rule.message
                     });
+                } else {
+                    await this.logger.info('Validation passed', {
+                        executionId: context.executionId,
+                        workflowId: context.workflowId,
+                        name: context.workflowName,
+                        rule,
+                        data,
+                        status: 'passed'
+                    });
                 }
                 results.push({
                     rule,
                     success: isValid,
-                    message: isValid ? undefined : rule.message
+                    message: isValid ? `${rule.name} validation passed successfully!` : rule.message
                 });
             } catch (error) {
                 success = false;

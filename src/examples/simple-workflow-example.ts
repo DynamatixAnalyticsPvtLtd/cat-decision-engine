@@ -2,6 +2,7 @@ import { WorkflowMethod } from '../core/decorators/workflow-method.decorator';
 import { Workflow } from '../core/types/workflow';
 import { TaskType } from '../tasks/enums/task.enum';
 import { ValidationOnFail } from '../core/enums/validation.enum';
+import { SequentialTasksUseCase } from './sequential-tasks.usecase';
 
 // Define the workflow configuration
 export const simpleWorkflowConfig: Workflow = {
@@ -51,14 +52,20 @@ export class SimpleWorkflow {
 async function runExample() {
     try {
         const workflow = new SimpleWorkflow();
+        const sequentialTasksUseCase = new SequentialTasksUseCase();
         
         // This will trigger the workflow
         // const result = await workflow.processData({ name: 'John' });
         // console.log('Workflow result:', result);
         
         // This will fail validation
-        const invalidResult = await workflow.processData({ name: '' });
-        console.log('Invalid result:', invalidResult);
+        // const invalidResult = await workflow.processData({ name: '' });
+        const result = await sequentialTasksUseCase.processTransaction({
+            userName: 'John',
+            initialAmount: 1000,
+            currency: 'INR'
+        });
+        console.log('Invalid result:', result);
     } catch (error) {
         console.error('Error:', error);
     }
