@@ -7,7 +7,7 @@ import { AlertService } from '../services/alert.service';
 import { AlertRepository } from '../repositories/alert.repository';
 import { ILogger } from '../../../core/logging/logger.interface';
 import { MongoLogger } from '../../../core/logging/mongo-logger';
-import { AlertTask } from '../../../tasks/alert/alert-task.interface';
+import { AlertTask } from '../interfaces/alert.interface';
 import { ValidationResultItem } from '../../../core/types/validation-result';
 import { TaskType } from '../../../tasks/enums/task.enum';
 import { Types } from 'mongoose';
