@@ -74,15 +74,16 @@ export class WorkflowEngine {
             if (workflow.tasks && workflow.tasks.length > 0) {
                 // Filter alert tasks to execute even on validation failure
                 const alertTasks = workflow.tasks.filter(task => task.type === TaskType.ALERT);
-                const otherTasks = workflow.tasks.filter(task => task.type !== TaskType.ALERT);
 
-                // Execute alert tasks if validation failed
-                if (!validationResult.success && alertTasks.length > 0) {
-                    const alertTaskResults = await this.taskExecutor.executeBatch(alertTasks, context);
-                    taskResults.push(...alertTaskResults);
+                // If validation should stop, only execute alert tasks
+                if (validationResult.shouldStop) {
+                    if (alertTasks.length > 0) {
+                        const alertTaskResults = await this.taskExecutor.executeBatch(alertTasks, context);
+                        taskResults.push(...alertTaskResults);
+                    }
                 }
-                // Execute all tasks if validation passed
-                else if (validationResult.success) {
+                // Execute all tasks if validation passed or doesn't require stopping
+                else {
                     const taskResult = await this.taskExecutor.executeBatch(workflow.tasks, context);
                     if (taskResult) {
                         taskResults.push(...taskResult);
@@ -112,11 +113,11 @@ export class WorkflowEngine {
             }
 
             result = {
-                success: validationResult.success,
+                success: !validationResult.shouldStop, // Set success based on shouldStop
                 context,
                 validationResults,
                 taskResults,
-                error: validationResult.success ? undefined : 'Validation failed',
+                error: validationResult.shouldStop ? 'Validation failed and workflow stopped' : undefined,
                 executionId
             };
 
@@ -125,7 +126,7 @@ export class WorkflowEngine {
                 workflowId: workflow.id,
                 workflowName: workflow.name,
                 result,
-                status: validationResult.success ? 'completed' : 'failed',
+                status: !validationResult.shouldStop ? 'completed' : 'failed',
                 validationResults,
                 taskResults,
                 executionId

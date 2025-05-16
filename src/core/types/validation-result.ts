@@ -9,4 +9,5 @@ export interface ValidationResultItem {
 export interface ValidationResult {
     success: boolean;
     validationResults: ValidationResultItem[];
+    shouldStop: boolean;  // Indicates if workflow should stop after validation
 } 
