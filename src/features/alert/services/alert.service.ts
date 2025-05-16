@@ -1,6 +1,7 @@
 import { Alert, IAlertEngine } from '../interfaces/alert.interface';
 import { AlertRepository } from '../repositories/alert.repository';
 import { ILogger } from '../../../core/logging/logger.interface';
+import { Types } from 'mongoose';
 
 export class AlertService implements IAlertEngine {
     constructor(
@@ -15,11 +16,8 @@ export class AlertService implements IAlertEngine {
             // Validate alert data
             this.validateAlert(alert);
 
-            // Format alert message
-            const formattedAlert = this.formatAlert(alert);
-
-            // Save alert
-            const savedAlert = await this.alertRepository.raiseAlert(formattedAlert);
+            // Delegate to repository for MongoDB operations
+            const savedAlert = await this.alertRepository.raiseAlert(alert);
 
             this.logger.info('Alert raised successfully', { 
                 alertId: savedAlert.id,
@@ -43,8 +41,8 @@ export class AlertService implements IAlertEngine {
             throw new Error('Invalid alert source');
         }
 
-        if (!alert.sourceId || typeof alert.sourceId !== 'string') {
-            throw new Error('Invalid alert sourceId');
+        if (!alert.sourceId || !Types.ObjectId.isValid(alert.sourceId)) {
+            throw new Error('Invalid alert sourceId - must be a valid ObjectId');
         }
 
         if (!alert.alertMessage || typeof alert.alertMessage !== 'string') {
@@ -58,22 +56,5 @@ export class AlertService implements IAlertEngine {
         if (!['raised', 'satisfied'].includes(alert.status)) {
             throw new Error('Invalid alert status');
         }
-    }
-
-    private formatAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Omit<Alert, 'id' | 'timestamp'> {
-        return {
-            ...alert,
-            alertMessage: this.formatAlertMessage(alert.alertMessage),
-            source: alert.source.toLowerCase(),
-            sourceId: alert.sourceId.toLowerCase()
-        };
-    }
-
-    private formatAlertMessage(message: string): string {
-        // Remove extra whitespace
-        const trimmedMessage = message.trim();
-        
-        // Ensure message ends with a period
-        return trimmedMessage.endsWith('.') ? trimmedMessage : `${trimmedMessage}.`;
     }
 } 

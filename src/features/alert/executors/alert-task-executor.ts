@@ -3,21 +3,23 @@ import { Task } from '../../../core/types/task';
 import { WorkflowContext } from '../../../core/types/workflow-context';
 import { TaskResult } from '../../../core/types/task-result';
 import { IAlertEngine } from '../interfaces/alert.interface';
-import { AlertEngine } from '../../alert/alert-engine';
+import { AlertService } from '../services/alert.service';
+import { AlertRepository } from '../repositories/alert.repository';
 import { ILogger } from '../../../core/logging/logger.interface';
 import { MongoLogger } from '../../../core/logging/mongo-logger';
 import { AlertTask } from '../../../tasks/alert/alert-task.interface';
 import { ValidationResultItem } from '../../../core/types/validation-result';
 import { TaskType } from '../../../tasks/enums/task.enum';
-import { ObjectId } from 'mongodb';
+import { Types } from 'mongoose';
 
 export class AlertTaskExecutor implements ITaskExecutor {
-    private alertEngine: IAlertEngine;
+    private alertService: IAlertEngine;
     private logger: ILogger;
 
     constructor(logger?: ILogger) {
         this.logger = logger || new MongoLogger();
-        this.alertEngine = new AlertEngine();
+        const alertRepository = new AlertRepository();
+        this.alertService = new AlertService(alertRepository, this.logger);
     }
 
     private processTemplate(template: string, data: any): string {
@@ -42,11 +44,11 @@ export class AlertTaskExecutor implements ITaskExecutor {
         });
     }
 
-    private validateObjectId(id: string): ObjectId {
-        if (!ObjectId.isValid(id)) {
+    private validateObjectId(id: string): Types.ObjectId {
+        if (!Types.ObjectId.isValid(id)) {
             throw new Error(`SourceId '${id}' is not a valid MongoDB ObjectId`);
         }
-        return new ObjectId(id);
+        return new Types.ObjectId(id);
     }
 
     async execute(task: Task, context: WorkflowContext): Promise<TaskResult> {
@@ -65,7 +67,6 @@ export class AlertTaskExecutor implements ITaskExecutor {
 
             const alertTask = task as AlertTask;
             const { source, sourceId, alertMessage, isActive, status, category, validationId } = alertTask.config;
-            // console.log("ValidationID" , validationId);
             
             // If no validationId is provided, skip the alert
             if (!validationId) {
@@ -145,10 +146,10 @@ export class AlertTaskExecutor implements ITaskExecutor {
             // Validate that sourceId is a valid ObjectId and get the actual ObjectId
             const validatedSourceId = this.validateObjectId(processedSourceId);
 
-            // Create alert using the alert engine with the actual ObjectId
-            const alert = await this.alertEngine.raiseAlert({
+            // Create alert using the alert service with the actual ObjectId
+            const alert = await this.alertService.raiseAlert({
                 source: processedSource,
-                sourceId: validatedSourceId, // This is now an actual ObjectId
+                sourceId: validatedSourceId,
                 alertMessage: processedAlertMessage,
                 isActive,
                 status,

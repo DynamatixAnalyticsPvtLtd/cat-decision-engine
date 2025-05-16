@@ -55,7 +55,7 @@ async function runExample() {
     try {
         const workflow = new SimpleWorkflow();
         // const sequentialTasksUseCase = new SequentialTasksUseCase();
-        const result = await workflow.processData({personalDetails :{ docId : "68231dee3ba9a075d68f5692" , firstName : 'John' , lastName : '' }});
+        const result = await workflow.processData({personalDetails :{ docId : "68231dee3ba9a075d68f5692" , firstName : '' , lastName : '' }});
         console.log('Invalid result:', result);
     } catch (error) {
         console.error('Error:', error);

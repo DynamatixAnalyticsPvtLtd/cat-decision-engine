@@ -13,6 +13,7 @@ import { Task } from './types/task';
 import { MongoLogger } from './logging/mongo-logger';
 import { v4 as uuidv4 } from 'uuid';
 import { TaskType } from '../tasks/enums/task.enum';
+import { initMongooseConnection } from './config/mongoose-connection';
 
 export class WorkflowEngine {
     private readonly logger: ILogger;
@@ -37,6 +38,7 @@ export class WorkflowEngine {
         if (!workflow) {
             throw new WorkflowError('Workflow is required', 'VALIDATION_ERROR');
         }
+        await initMongooseConnection();
 
         const executionId = uuidv4();
         let result: WorkflowResult = {
