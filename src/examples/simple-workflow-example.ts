@@ -44,6 +44,8 @@ export class SimpleWorkflow {
         // 1. Run the name validation
         // 2. If validation passes, create an alert
         // 3. Return the processed data
+        console.log("DATA: ", data);
+        
         return data;
     }
 }
@@ -52,19 +54,8 @@ export class SimpleWorkflow {
 async function runExample() {
     try {
         const workflow = new SimpleWorkflow();
-        const sequentialTasksUseCase = new SequentialTasksUseCase();
-        
-        // This will trigger the workflow
-        // const result = await workflow.processData({ name: 'John' });
-        // console.log('Workflow result:', result);
-        
-        // This will fail validation
-        const result = await workflow.processData({ _id : "68231dee3ba9a075d68f5692" , name : '' });
-        // const result = await sequentialTasksUseCase.processTransaction({
-        //     userName: 'John',
-        //     initialAmount: 1000,
-        //     currency: 'INR'
-        // });
+        // const sequentialTasksUseCase = new SequentialTasksUseCase();
+        const result = await workflow.processData({personalDetails :{ docId : "68231dee3ba9a075d68f5692" , firstName : 'John' , lastName : '' }});
         console.log('Invalid result:', result);
     } catch (error) {
         console.error('Error:', error);
