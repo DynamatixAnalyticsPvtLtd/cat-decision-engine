@@ -1,8 +1,24 @@
 import { WorkflowMethod } from '../core/decorators/workflow-method.decorator';
+import { initializeLibrary } from '../core/config/library-config';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+initializeLibrary({
+    mongodb: {
+        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017',        // Your MongoDB connection string
+        database: 'gatehouse-qa',      // Optional, defaults to 'workflow-engine'
+        collection: 'workflow_logs',        // Optional, defaults to 'workflows'
+        options: {                           // Optional MongoDB connection options
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        }
+    }
+});
 
 // The class that uses the workflow
 export class SimpleWorkflow {
-    @WorkflowMethod()
+    @WorkflowMethod()       
     async processData(data: any) {
         // This method will:
         // 1. Run the name validation

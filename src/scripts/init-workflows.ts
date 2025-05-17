@@ -1,14 +1,13 @@
 import { MongoClient } from 'mongodb';
 import { Workflow } from '../core/types/workflow';
 import { TaskType, TaskMethod, TaskPriority, TaskRetryStrategy } from 'tasks/enums/task.enum';
-import dotenv from 'dotenv';
 import { ValidationOnFail } from 'core/enums/validation.enum';
-// Load environment variables
-dotenv.config();
+import { getConfig } from 'core/config/library-config';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = process.env.DB_NAME || 'workflow-engine';
-const COLLECTION_NAME = 'workflows';
+const { mongodb } = getConfig();
+const MONGODB_URI = mongodb.uri;
+const DB_NAME = mongodb.database || 'workflow-engine';
+const COLLECTION_NAME = mongodb.collection || 'workflows_logs';
 
 async function initWorkflows() {
     const client = new MongoClient(MONGODB_URI);

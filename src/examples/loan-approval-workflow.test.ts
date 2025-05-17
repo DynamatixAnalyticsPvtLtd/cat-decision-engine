@@ -5,14 +5,16 @@ import { MongoClient } from 'mongodb';
 import { MongoLogger } from '../core/logging/mongo-logger';
 import { ILogger } from 'core/logging/logger.interface';
 import { WorkflowEngine } from '../core/workflow-engine';
+import { getConfig } from 'core/config/library-config';
 
 describe('Loan Approval Workflow', () => {
     let logger: MongoLogger;
+    const { mongodb } = getConfig();
     let validationExecutor: ValidationExecutor;
     let mongoClient: MongoClient;
-    const mongoUrl = process.env.MONGODB_URI;
-    const dbName = process.env.DB_NAME || 'workflow-engine';
-    const collectionName = process.env.COLLECTION_NAME || 'workflow_logs';
+    const mongoUrl = mongodb.uri;
+    const dbName = mongodb.database || 'workflow-engine';
+    const collectionName = mongodb.collection || 'workflow_logs';
 
     beforeAll(async () => {
         if (!mongoUrl) {

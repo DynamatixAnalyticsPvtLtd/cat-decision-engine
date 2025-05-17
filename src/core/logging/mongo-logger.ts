@@ -1,8 +1,6 @@
 import { ILogger } from './logger.interface';
 import { MongoClient, Collection } from 'mongodb';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { getConfig } from '../config/library-config';
 
 export class MongoLogger implements ILogger {
     private client: MongoClient;
@@ -11,7 +9,8 @@ export class MongoLogger implements ILogger {
     private connectionPromise: Promise<void>;
 
     constructor() {
-        const mongoUrl = process.env.MONGODB_URI;
+        const { mongodb } = getConfig();
+        const mongoUrl = mongodb.uri;
         if (!mongoUrl) {
             throw new Error('MONGODB_URI environment variable is not set');
         }
@@ -22,10 +21,11 @@ export class MongoLogger implements ILogger {
     private async connect() {
         try {
             await this.client.connect();
+            const { mongodb } = getConfig();
             this.isConnected = true;
 
-            const dbName = process.env.DB_NAME || 'workflow-engine';
-            const collectionName = process.env.COLLECTION_NAME || 'workflow_logs';
+            const dbName = mongodb.database || 'workflow-engine';
+            const collectionName = mongodb.collection || 'workflow_logs';
 
             this.collection = this.client.db(dbName).collection(collectionName);
 

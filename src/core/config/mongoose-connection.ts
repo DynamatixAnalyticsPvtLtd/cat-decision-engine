@@ -1,18 +1,19 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { getConfig } from './library-config';
 
 export async function initMongooseConnection() {
-  if (mongoose.connection.readyState !== 1) {
+    const { mongodb } = getConfig();
+    
     try {
-      const mongoUrl = process.env.MONGODB_URI || 'mongodb+srv://admin:admin@dheeraj-cluster.bcf6v.mongodb.net/workflow-engine?retryWrites=true&w=majority';
-      await mongoose.connect(mongoUrl);
-      console.log('Mongoose connected to MongoDB');
+        const mongoUrl = mongodb.uri;
+        if (!mongoUrl) {
+            throw new Error('MongoDB URI is not configured');
+        }
+        await mongoose.connect(mongoUrl);
+        console.log('Mongoose connected to MongoDB');
     } catch (error) {
-      console.error('Failed to connect to MongoDB:', error);
-      throw error;
+        console.error('Failed to connect to MongoDB:', error);
+        throw error;
     }
-  }
-  return mongoose.connection;
+    return mongoose.connection;
 } 
