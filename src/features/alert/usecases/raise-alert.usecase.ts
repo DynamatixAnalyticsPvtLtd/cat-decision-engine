@@ -1,4 +1,4 @@
-import { Alert, IAlertEngine } from '../interfaces/alert.interface';
+import { Alert, IAlertEngine } from '../../../tasks/alert/alert.interface';
 import { AlertService } from '../services/alert.service';
 import { ILogger } from '../../../core/logging/logger.interface';
 

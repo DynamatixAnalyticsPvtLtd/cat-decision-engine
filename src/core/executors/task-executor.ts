@@ -1,10 +1,10 @@
 import { Task, WorkflowContext } from '../types';
 import { TaskResult } from '../types/task-result';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
-import { TaskType } from 'tasks/enums/task.enum';
+import { TaskType } from '../../tasks/enums/task.enum';
 import { TaskError } from '../errors/workflow-error';
 import { TaskFactory } from '../../tasks/factory/task.factory';
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from '../logging/logger.interface';
 import { MongoLogger } from '../logging/mongo-logger';
 
 export class TaskExecutor implements ITaskExecutor {

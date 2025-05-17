@@ -1,14 +1,20 @@
-import { Alert, IAlertEngine } from '../interfaces/alert.interface';
+import { Alert, IAlertEngine } from '../../../tasks/alert/alert.interface';
 import { AlertModel, AlertDocument } from '../models/alert.model';
 
 export class AlertRepository implements IAlertEngine {
     async raiseAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Promise<Alert> {
+        console.log('Attempting to save alert:', {
+            ...alert,
+            timestamp: new Date()
+        });
+
         const newAlert = new AlertModel({
             ...alert,
             timestamp: new Date()
         });
 
         const savedAlert = await newAlert.save();
+        console.log('Alert saved successfully:', this.mapToAlert(savedAlert));
         return this.mapToAlert(savedAlert);
     }
 

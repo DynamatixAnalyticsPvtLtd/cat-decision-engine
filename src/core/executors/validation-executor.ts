@@ -3,6 +3,7 @@ import { ValidationResult, ValidationResultItem } from '../types/validation-resu
 import { MongoLogger } from '../logging/mongo-logger';
 import { ILogger } from 'core/logging/logger.interface';
 import { WorkflowContext } from '../types/workflow-context';
+import { ValidationOnFail } from '../enums/validation.enum';
 
 export class ValidationExecutor {
     private logger: ILogger;
@@ -13,13 +14,12 @@ export class ValidationExecutor {
 
     async execute(rules: ValidationRule[], data: any, context: WorkflowContext): Promise<ValidationResult> {
         const results: ValidationResultItem[] = [];
-        let success = true;
+        let shouldStop = false;
 
         for (const rule of rules) {
             try {
                 const isValid = await this.evaluateCondition(rule.condition, data);
                 if (!isValid) {
-                    success = false;
                     await this.logger.error('Validation failed', {
                         executionId: context.executionId,
                         workflowId: context.workflowId,
@@ -29,14 +29,27 @@ export class ValidationExecutor {
                         status: 'failed',
                         message: rule.message
                     });
+
+                    // If any validation fails with STOP, mark shouldStop as true
+                    if (rule.onFail === ValidationOnFail.STOP) {
+                        shouldStop = true;
+                    }
+                } else {
+                    await this.logger.info('Validation passed', {
+                        executionId: context.executionId,
+                        workflowId: context.workflowId,
+                        name: context.workflowName,
+                        rule,
+                        data,
+                        status: 'passed'
+                    });
                 }
                 results.push({
                     rule,
                     success: isValid,
-                    message: isValid ? undefined : rule.message
+                    message: isValid ? `${rule.name} validation passed successfully!` : rule.message
                 });
             } catch (error) {
-                success = false;
                 results.push({
                     rule,
                     success: false,
@@ -49,12 +62,21 @@ export class ValidationExecutor {
                     rule,
                     error
                 });
+
+                // If any validation error occurs with STOP, mark shouldStop as true
+                if (rule.onFail === ValidationOnFail.STOP) {
+                    shouldStop = true;
+                }
             }
         }
 
+        // Check if any validation failed with STOP
+        const hasFailedValidation = results.some(result => !result.success);
+        
         return {
-            success,
-            validationResults: results
+            success: !shouldStop, // Only set success to false if we need to stop
+            validationResults: results,
+            shouldStop: shouldStop && hasFailedValidation // Only stop if there's a failed validation with STOP
         };
     }
 

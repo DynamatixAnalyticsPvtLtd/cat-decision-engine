@@ -6,6 +6,7 @@ import { TaskError } from '../../core/errors/workflow-error';
 import { ApiTaskExecutor } from '../api/api-task.executor';
 import { TaskValidationService } from '../../core/services/task-validation.service';
 import { ITaskExecutor } from '../interfaces/task-executor.interface';
+import { AlertTaskExecutor } from '../alert/alert-task-executor';
 
 export class TaskFactory {
     private taskExecutors: Map<TaskType, ITaskExecutor>;
@@ -19,6 +20,7 @@ export class TaskFactory {
 
     private initializeTaskExecutors(): void {
         this.taskExecutors.set(TaskType.API_CALL, new ApiTaskExecutor(this.logger));
+        this.taskExecutors.set(TaskType.ALERT, new AlertTaskExecutor(this.logger));
         // Add other task executors as needed
     }
 

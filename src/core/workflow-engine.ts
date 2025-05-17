@@ -1,4 +1,4 @@
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from './logging/logger.interface';
 import { DefaultLogger } from './logging/default-logger';
 import { TaskFactory } from '../tasks/factory/task.factory';
 import { TaskExecutor } from './executors/task-executor';
@@ -12,6 +12,8 @@ import { TaskResult } from './types/task-result';
 import { Task } from './types/task';
 import { MongoLogger } from './logging/mongo-logger';
 import { v4 as uuidv4 } from 'uuid';
+import { TaskType } from '../tasks/enums/task.enum';
+import { initMongooseConnection } from './config/mongoose-connection';
 
 export class WorkflowEngine {
     private readonly logger: ILogger;
@@ -36,11 +38,18 @@ export class WorkflowEngine {
         if (!workflow) {
             throw new WorkflowError('Workflow is required', 'VALIDATION_ERROR');
         }
+        await initMongooseConnection();
 
         const executionId = uuidv4();
         let result: WorkflowResult = {
             success: false,
-            context: { data },
+            context: { 
+                data,
+                workflowId: workflow?.id || '',
+                workflowName: workflow?.name || '',
+                executionId,
+                validationResults: []
+            },
             validationResults: [],
             taskResults: [],
             executionId
@@ -60,7 +69,8 @@ export class WorkflowEngine {
                 data,
                 workflowId: workflow.id,
                 workflowName: workflow.name,
-                executionId
+                executionId,
+                validationResults: []
             };
             const validationResults: ValidationResultItem[] = [];
             const taskResults: TaskResult[] = [];
@@ -68,71 +78,67 @@ export class WorkflowEngine {
             // Execute validations using ValidationExecutor
             const validationResult = await this.validationExecutor.execute(workflow.validations, data, context);
             validationResults.push(...validationResult.validationResults);
-            if (!validationResult.success) {
-                result = {
-                    success: false,
-                    context,
-                    validationResults,
-                    taskResults,
-                    error: 'Validation failed',
-                    executionId
-                };
-                await this.logger.error(`Workflow validation failed: ${workflow.id}`, {
-                    workflow,
-                    workflowId: workflow.id,
-                    workflowName: workflow.name,
-                    error: 'Validation failed',
-                    status: 'failed',
-                    validationResults,
-                    taskResults,
-                    executionId
-                });
-                return result;
-            }
-
+            
+            // Update context with validation results
+            context.validationResults = validationResult.validationResults;
+            
             // Execute tasks using TaskExecutor
             if (workflow.tasks && workflow.tasks.length > 0) {
-                const taskResult = await this.taskExecutor.executeBatch(workflow.tasks, context);
-                if (taskResult) {
-                    taskResults.push(...taskResult);
-                    if (taskResult.some(result => !result.success)) {
-                        result = {
-                            success: false,
-                            context,
-                            validationResults,
-                            taskResults,
-                            error: 'Task execution failed',
-                            executionId
-                        };
-                        await this.logger.error(`Workflow task execution failed: ${workflow.id}`, {
-                            workflow,
-                            workflowId: workflow.id,
-                            workflowName: workflow.name,
-                            error: 'Task execution failed',
-                            status: 'failed',
-                            validationResults,
-                            taskResults,
-                            executionId
-                        });
-                        return result;
+                // Filter alert tasks to execute even on validation failure
+                const alertTasks = workflow.tasks.filter(task => task.type === TaskType.ALERT);
+
+                // If validation should stop, only execute alert tasks
+                if (validationResult.shouldStop) {
+                    if (alertTasks.length > 0) {
+                        const alertTaskResults = await this.taskExecutor.executeBatch(alertTasks, context);
+                        taskResults.push(...alertTaskResults);
+                    }
+                }
+                // Execute all tasks if validation passed or doesn't require stopping
+                else {
+                    const taskResult = await this.taskExecutor.executeBatch(workflow.tasks, context);
+                    if (taskResult) {
+                        taskResults.push(...taskResult);
+                        if (taskResult.some(result => !result.success)) {
+                            result = {
+                                success: false,
+                                context,
+                                validationResults,
+                                taskResults,
+                                error: 'Task execution failed',
+                                executionId
+                            };
+                            await this.logger.error(`Workflow task execution failed: ${workflow.id}`, {
+                                workflow,
+                                workflowId: workflow.id,
+                                workflowName: workflow.name,
+                                error: 'Task execution failed',
+                                status: 'failed',
+                                validationResults,
+                                taskResults,
+                                executionId
+                            });
+                            return result;
+                        }
                     }
                 }
             }
 
             result = {
-                success: true,
+                success: !validationResult.shouldStop, // Set success based on shouldStop
                 context,
                 validationResults,
                 taskResults,
+                error: validationResult.shouldStop ? 'Validation failed and workflow stopped' : undefined,
                 executionId
             };
 
-            await this.logger.info(`Workflow completed successfully: ${workflow.id}`, {
+            await this.logger.info(`Workflow completed: ${workflow.id}`, {
                 workflow,
                 workflowId: workflow.id,
                 workflowName: workflow.name,
                 result,
-                status: 'completed',
+                status: !validationResult.shouldStop ? 'completed' : 'failed',
                 validationResults,
                 taskResults,
                 executionId
