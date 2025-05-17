@@ -1,5 +1,5 @@
 import { Alert, IAlertEngine } from '../../../tasks/alert/alert.interface';
-import { AlertModel, AlertDocument } from '../models/alert.model';
+import { WorkflowAlertModel, AlertDocument } from '../models/alert.model';
 
 export class AlertRepository implements IAlertEngine {
     async raiseAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Promise<Alert> {
@@ -8,7 +8,7 @@ export class AlertRepository implements IAlertEngine {
             timestamp: new Date()
         });
 
-        const newAlert = new AlertModel({
+        const newAlert = new WorkflowAlertModel({
             ...alert,
             timestamp: new Date()
         });
@@ -19,22 +19,22 @@ export class AlertRepository implements IAlertEngine {
     }
 
     async findById(id: string): Promise<Alert | null> {
-        const alert = await AlertModel.findById(id);
+        const alert = await WorkflowAlertModel.findById(id);
         return alert ? this.mapToAlert(alert) : null;
     }
 
     async findBySourceAndSourceId(source: string, sourceId: string): Promise<Alert[]> {
-        const alerts = await AlertModel.find({ source, sourceId });
+        const alerts = await WorkflowAlertModel.find({ source, sourceId });
         return alerts.map(this.mapToAlert);
     }
 
     async findActiveAlerts(): Promise<Alert[]> {
-        const alerts = await AlertModel.find({ isActive: true });
+        const alerts = await WorkflowAlertModel.find({ isActive: true });
         return alerts.map(this.mapToAlert);
     }
 
     async updateStatus(id: string, status: Alert['status']): Promise<Alert | null> {
-        const alert = await AlertModel.findByIdAndUpdate(
+        const alert = await WorkflowAlertModel.findByIdAndUpdate(
             id,
             { status },
             { new: true }
@@ -43,7 +43,7 @@ export class AlertRepository implements IAlertEngine {
     }
 
     async deactivateAlert(id: string): Promise<Alert | null> {
-        const alert = await AlertModel.findByIdAndUpdate(
+        const alert = await WorkflowAlertModel.findByIdAndUpdate(
             id,
             { isActive: false },
             { new: true }

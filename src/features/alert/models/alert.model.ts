@@ -51,4 +51,4 @@ const alertSchema = new Schema<AlertDocument>({
 alertSchema.index({ source: 1, sourceId: 1 });
 alertSchema.index({ status: 1, isActive: 1 });
 
-export const AlertModel = model<AlertDocument>('Alert', alertSchema); 
+export const WorkflowAlertModel = model<AlertDocument>('WorkflowAlert', alertSchema); 
