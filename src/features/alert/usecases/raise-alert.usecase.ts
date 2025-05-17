@@ -1,6 +1,7 @@
 import { Alert, IAlertEngine } from '../../../tasks/alert/alert.interface';
 import { AlertService } from '../services/alert.service';
 import { ILogger } from '../../../core/logging/logger.interface';
+import { ObjectId } from 'mongodb';
 
 export interface RaiseAlertInput {
     source: string;
@@ -35,7 +36,7 @@ export class RaiseAlertUseCase {
             // Prepare alert data
             const alertData: Omit<Alert, 'id' | 'timestamp'> = {
                 source: input.source,
-                sourceId: input.sourceId,
+                sourceId: new ObjectId(input.sourceId),
                 alertMessage: input.alertMessage,
                 category: input.category,
                 isActive: input.isActive ?? true,
@@ -87,4 +88,4 @@ export class RaiseAlertUseCase {
             throw new Error('Alert message is too long');
         }
     }
-} 
+}
