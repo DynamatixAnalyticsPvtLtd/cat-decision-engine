@@ -1,6 +1,6 @@
 {
   "name": "@dynamatix/cat-decision-engine",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "A powerful Node.js library for building and executing configurable workflows with validation and task execution capabilities",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,9 +17,7 @@
     "dev": "ts-node src/index.ts",
     "test:watch": "jest --watch",
     "lint": "eslint . --ext .ts",
-    "seed:workflows": "ts-node src/scripts/init-workflows.ts",
-    "prepublishOnly": "npm run build",
-    "prepare": "npm run build"
+    "seed:workflows": "ts-node src/scripts/init-workflows.ts"
   },
   "keywords": [
     "workflow",
