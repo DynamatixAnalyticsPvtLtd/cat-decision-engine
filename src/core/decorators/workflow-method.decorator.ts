@@ -14,6 +14,10 @@ export function WorkflowMethod() {
 
         descriptor.value = async function (...args: any[]) {
             console.log('args', args);
+
+            // Execute the original method first
+            const methodResult = await originalMethod.apply(this, args);
+
             const workflowStore = await getWorkflowStore();
 
             const logger = new DefaultLogger();
@@ -35,14 +39,14 @@ export function WorkflowMethod() {
             );
 
             if (!workflow) {
-                // If no workflow found, just execute the original method
-                return originalMethod.apply(this, args);
+                // If no workflow found, just return the original method result
+                return methodResult;
             }
 
-            // Pass the original input object directly to the workflow
-            const workflowData = args[0];
+            // Pass the method result to the workflow instead of input arguments
+            const workflowData = methodResult;
 
-            // Execute the workflow first
+            // Execute the workflow with the method result
             const result = await workflowEngine.execute(workflow, workflowData);
 
             // If workflow failed, return the workflow result
@@ -50,8 +54,8 @@ export function WorkflowMethod() {
                 return result;
             }
 
-            // If workflow was successful, execute the original method
-            return originalMethod.apply(this, args);
+            // If workflow was successful, return the original method result
+            return methodResult;
         };
 
         return descriptor;

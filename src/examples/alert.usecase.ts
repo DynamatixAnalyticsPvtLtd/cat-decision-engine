@@ -5,7 +5,12 @@ export class FetchApplicationsUseCase {
 
 
     @WorkflowMethod()
-    runWorkflow(data: any) {
-        return data;
+    runWorkflow() {
+        return {
+            personalDetails: {
+                lastName: "A"
+            },
+            _id: "68726f0089d347a0db559dd9",
+        };
     }
 }

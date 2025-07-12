@@ -116,9 +116,9 @@ export class AlertTaskExecutor implements ITaskExecutor {
 
             const validationResult = context.validationResults.find((vr: ValidationResultItem) => vr.rule.id === validationId);
 
-            // Skip alert if validation passed or validation result not found
-            if (!validationResult || validationResult.success) {
-                await this.logger.info('Skipping alert task - validation passed or not found', {
+            // Skip alert if validation failed
+            if (!validationResult.success) {
+                await this.logger.info('Skipping alert task - validation failed', {
                     taskId: task.id,
                     validationId,
                     workflowId: context.workflowId,

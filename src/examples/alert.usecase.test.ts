@@ -40,14 +40,8 @@ describe('Dynamic Form Client Integration Tests', () => {
             setContext({
                 contextId: "68726f0089d347a0db559dd8"
             });
-            const data = {
-                personalDetails: {
-                    lastName: "ABC"
-                },
-                _id: "68726f0089d347a0db559dd9",
-            };
             // Trigger the workflow
-            await new FetchApplicationsUseCase().runWorkflow(data);
+            await new FetchApplicationsUseCase().runWorkflow();
 
             // Wait for logs to be written and verify workflow execution
             let logs: any[] = [];
