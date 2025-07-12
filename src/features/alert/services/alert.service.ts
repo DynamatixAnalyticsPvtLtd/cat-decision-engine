@@ -7,19 +7,20 @@ export class AlertService implements IAlertEngine {
     constructor(
         private readonly alertRepository: AlertRepository,
         private readonly logger: ILogger
-    ) {}
+    ) { }
 
     async raiseAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Promise<Alert> {
         try {
+            alert.status = 'raised';
             this.logger.debug('Raising alert', { source: alert.source, sourceId: alert.sourceId });
-            
+
             // Validate alert data
             this.validateAlert(alert);
 
             // Delegate to repository for MongoDB operations
             const savedAlert = await this.alertRepository.raiseAlert(alert);
 
-            this.logger.info('Alert raised successfully', { 
+            this.logger.info('Alert raised successfully', {
                 alertId: savedAlert.id,
                 source: savedAlert.source,
                 sourceId: savedAlert.sourceId
@@ -27,7 +28,7 @@ export class AlertService implements IAlertEngine {
 
             return savedAlert;
         } catch (error) {
-            this.logger.error('Failed to raise alert', { 
+            this.logger.error('Failed to raise alert', {
                 error: error instanceof Error ? error.message : 'Unknown error',
                 source: alert.source,
                 sourceId: alert.sourceId

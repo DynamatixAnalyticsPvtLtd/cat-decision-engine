@@ -38,12 +38,15 @@ export class WorkflowEngine {
         if (!workflow) {
             throw new WorkflowError('Workflow is required', 'VALIDATION_ERROR');
         }
+        if (!data) {
+            throw new WorkflowError('Data is required', 'VALIDATION_ERROR');
+        }
         await initMongooseConnection();
 
         const executionId = uuidv4();
         let result: WorkflowResult = {
             success: false,
-            context: { 
+            context: {
                 data,
                 workflowId: workflow?.id || '',
                 workflowName: workflow?.name || '',
@@ -78,10 +81,10 @@ export class WorkflowEngine {
             // Execute validations using ValidationExecutor
             const validationResult = await this.validationExecutor.execute(workflow.validations, data, context);
             validationResults.push(...validationResult.validationResults);
-            
+
             // Update context with validation results
             context.validationResults = validationResult.validationResults;
-            
+
             // Execute tasks using TaskExecutor
             if (workflow.tasks && workflow.tasks.length > 0) {
                 // Filter alert tasks to execute even on validation failure
@@ -133,16 +136,7 @@ export class WorkflowEngine {
                 executionId
             };
 
-            await this.logger.info(`Workflow completed: ${workflow.id}`, {
-                workflow,
-                workflowId: workflow.id,
-                workflowName: workflow.name,
-                result,
-                status: !validationResult.shouldStop ? 'completed' : 'failed',
-                validationResults,
-                taskResults,
-                executionId
-            });
+
             return result;
 
         } catch (error) {

@@ -1,6 +1,11 @@
 import { ILogger } from './logger.interface';
 import { MongoClient, Collection } from 'mongodb';
-import { getConfig } from '../config/library-config';
+
+export interface MongoLoggerConfig {
+    mongoUrl?: string;
+    database?: string;
+    collection?: string;
+}
 
 export class MongoLogger implements ILogger {
     private client: MongoClient;
@@ -8,24 +13,22 @@ export class MongoLogger implements ILogger {
     private isConnected: boolean = false;
     private connectionPromise: Promise<void>;
 
-    constructor() {
-        const { mongodb } = getConfig();
-        const mongoUrl = mongodb.uri;
+    constructor(config?: MongoLoggerConfig) {
+        const mongoUrl = config?.mongoUrl || process.env.MONGODB_URI;
         if (!mongoUrl) {
-            throw new Error('MONGODB_URI environment variable is not set');
+            throw new Error('MongoDB URI is required. Set MONGODB_URI environment variable or pass mongoUrl in config.');
         }
         this.client = new MongoClient(mongoUrl);
-        this.connectionPromise = this.connect();
+        this.connectionPromise = this.connect(config);
     }
 
-    private async connect() {
+    private async connect(config?: MongoLoggerConfig) {
         try {
             await this.client.connect();
-            const { mongodb } = getConfig();
             this.isConnected = true;
 
-            const dbName = mongodb.database || 'workflow-engine';
-            const collectionName = mongodb.collection || 'workflow_logs';
+            const dbName = config?.database || process.env.MONGODB_DATABASE || 'workflow-engine';
+            const collectionName = config?.collection || process.env.MONGODB_COLLECTION || 'workflow_logs';
 
             this.collection = this.client.db(dbName).collection(collectionName);
 

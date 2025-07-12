@@ -11,6 +11,7 @@ import { AlertTask } from './alert.interface';
 import { ValidationResultItem } from '../../core/types/validation-result';
 import { TaskType } from '../enums/task.enum';
 import { Types } from 'mongoose';
+import { getContext } from '@dynamatix/cat-shared';
 
 export class AlertTaskExecutor implements ITaskExecutor {
     private alertService: IAlertEngine;
@@ -27,7 +28,7 @@ export class AlertTaskExecutor implements ITaskExecutor {
         return template.replace(/\${([^}]+)}/g, (match, key) => {
             // Trim the key to remove any whitespace
             const trimmedKey = key.trim();
-            
+
             // Handle both data.property and direct property access
             let value;
             if (trimmedKey.startsWith('data.')) {
@@ -38,7 +39,7 @@ export class AlertTaskExecutor implements ITaskExecutor {
                 // Direct property access
                 value = trimmedKey.split('.').reduce((obj: any, k: string) => obj?.[k], data);
             }
-            
+
             // If value is undefined or null, return the original match
             return value !== undefined && value !== null ? value : match;
         });
@@ -66,8 +67,8 @@ export class AlertTaskExecutor implements ITaskExecutor {
             }
 
             const alertTask = task as AlertTask;
-            const { source, sourceId, alertMessage, isActive, status, category, validationId } = alertTask.config;
-            
+            const { source, sourceId, alertMessage, isActive, status, category, validationId, formName } = alertTask.config;
+
             // If no validationId is provided, skip the alert
             if (!validationId) {
                 await this.logger.info('Skipping alert task - no validationId provided', {
@@ -114,7 +115,7 @@ export class AlertTaskExecutor implements ITaskExecutor {
             }
 
             const validationResult = context.validationResults.find((vr: ValidationResultItem) => vr.rule.id === validationId);
-            
+
             // Skip alert if validation passed or validation result not found
             if (!validationResult || validationResult.success) {
                 await this.logger.info('Skipping alert task - validation passed or not found', {
@@ -142,10 +143,11 @@ export class AlertTaskExecutor implements ITaskExecutor {
             const processedSource = this.processTemplate(source, context.data);
             const processedAlertMessage = this.processTemplate(alertMessage, context.data);
             const processedSourceId = this.processTemplate(sourceId, context.data);
-            
-            // Validate that sourceId is a valid ObjectId and get the actual ObjectId
-            const validatedSourceId = this.validateObjectId(processedSourceId);
 
+            // Validate that sourceId is a valid ObjectId and get the actual ObjectId
+            console.log(processedSourceId + "=====22");
+            const validatedSourceId = this.validateObjectId(processedSourceId);
+            const contextId = getContext()?.contextId;
             // Create alert using the alert service with the actual ObjectId
             const alert = await this.alertService.raiseAlert({
                 source: processedSource,
@@ -153,7 +155,9 @@ export class AlertTaskExecutor implements ITaskExecutor {
                 alertMessage: processedAlertMessage,
                 isActive,
                 status,
-                category
+                category,
+                formName,
+                contextId: contextId
             });
 
             await this.logger.info('Alert created successfully', {

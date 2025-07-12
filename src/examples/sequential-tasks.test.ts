@@ -1,13 +1,11 @@
 import { MongoClient } from 'mongodb';
 import { SequentialTasksUseCase } from './sequential-tasks.usecase';
-import { getConfig } from '../core/config/library-config';
 
 jest.setTimeout(50000);
 
-const { mongodb } = getConfig();
-const MONGODB_URI = mongodb.uri;
-const DB_NAME = mongodb.database || 'workflow-engine';
-const LOGS_COLLECTION = mongodb.collection || 'workflow_logs';
+const MONGODB_URI = process.env.MONGODB_URI;
+const DB_NAME = process.env.MONGODB_DATABASE || 'workflow-engine';
+const LOGS_COLLECTION = process.env.MONGODB_COLLECTION || 'workflow_logs';
 
 describe('Sequential Tasks Integration Tests', () => {
     let client: MongoClient;

@@ -13,6 +13,7 @@ export function WorkflowMethod() {
         const originalMethod = descriptor.value;
 
         descriptor.value = async function (...args: any[]) {
+            console.log('args', args);
             const workflowStore = await getWorkflowStore();
 
             const logger = new DefaultLogger();

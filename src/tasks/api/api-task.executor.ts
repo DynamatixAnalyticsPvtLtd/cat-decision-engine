@@ -52,6 +52,7 @@ export class ApiTaskExecutor implements ITaskExecutor {
                 success: true,
                 output: {
                     statusCode: response.status,
+                    headers: response.headers,
                     data: response.data
                 },
                 metadata: {

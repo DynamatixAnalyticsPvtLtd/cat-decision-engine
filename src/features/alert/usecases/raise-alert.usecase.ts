@@ -9,6 +9,8 @@ export interface RaiseAlertInput {
     alertMessage: string;
     category?: string;
     isActive?: boolean;
+    formName: Array<string>;
+    contextId: string;
 }
 
 export interface RaiseAlertResult {
@@ -40,7 +42,9 @@ export class RaiseAlertUseCase {
                 alertMessage: input.alertMessage,
                 category: input.category,
                 isActive: input.isActive ?? true,
-                status: 'raised'
+                status: 'raised',
+                formName: input.formName,
+                contextId: input.contextId
             };
 
             // Raise alert

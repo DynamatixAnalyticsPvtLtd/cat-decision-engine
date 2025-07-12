@@ -14,7 +14,8 @@ describe('AlertTask Interface', () => {
                 alertMessage: 'Test alert message',
                 isActive: true,
                 status: 'raised',
-                contextId: 'test-context-id'
+                contextId: 'test-context-id',
+                formName: ['test-form-name']
             }
         };
 
@@ -37,7 +38,8 @@ describe('AlertTask Interface', () => {
                 alertMessage: 'Test alert message',
                 isActive: true,
                 status: 'raised',
-                contextId: 'test-context-id'
+                contextId: 'test-context-id',
+                formName: ['test-form-name']
             }
         };
 
@@ -56,7 +58,8 @@ describe('AlertTask Interface', () => {
                 alertMessage: 'Test alert message',
                 isActive: true,
                 status: 'raised',
-                contextId: 'test-context-id'
+                contextId: 'test-context-id',
+                formName: ['test-form-name']
             }
         };
 
@@ -80,7 +83,8 @@ describe('AlertTask Interface', () => {
                 isActive: true,
                 status: 'raised',
                 category: 'test-category',
-                contextId: 'test-context-id'
+                contextId: 'test-context-id',
+                formName: ['test-form-name']
             }
         };
 

@@ -13,7 +13,12 @@ export class AlertRepository implements IAlertEngine {
             ...alert,
             timestamp: new Date()
         });
-
+        // check if alert already exists
+        const existingAlert = await WorkflowAlertModel.findOne({ source: alert.source, sourceId: alert.sourceId, contextId: alert.contextId, alertMessage: alert.alertMessage });
+        if (existingAlert) {
+            console.log('Alert already exists:', this.mapToAlert(existingAlert));
+            return this.mapToAlert(existingAlert);
+        }
         const savedAlert = await newAlert.save();
         console.log('Alert saved successfully:', this.mapToAlert(savedAlert));
         return this.mapToAlert(savedAlert);
@@ -61,7 +66,9 @@ export class AlertRepository implements IAlertEngine {
             category: document.category,
             isActive: document.isActive,
             status: document.status,
-            timestamp: document.timestamp
+            timestamp: document.timestamp,
+            formName: document.formName || [],
+            contextId: document.contextId
         };
     }
 } 

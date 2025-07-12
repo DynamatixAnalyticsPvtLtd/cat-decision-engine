@@ -16,7 +16,7 @@ export class MongoWorkflowStore implements IWorkflowStore {
             const trigger = entityType
                 ? `${className}.${methodName}.${entityType}`
                 : `${className}.${methodName}`;
-
+            console.log(this.collection.collectionName + "=====11");
             const workflow = await this.collection.findOne({ trigger });
 
             if (!workflow) {

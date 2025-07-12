@@ -65,7 +65,8 @@ describe('AlertTaskFactory', () => {
                 alertMessage: 'Test alert message',
                 isActive: true,
                 status: 'raised',
-                contextId: 'test-context-id'
+                contextId: 'test-context-id',
+                formName: ['test-form-name']
             }
         };
 

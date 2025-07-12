@@ -8,8 +8,10 @@ export interface Alert {
     source: string;
     sourceId: Types.ObjectId;
     alertMessage: string;
+    contextId: string;
     category?: string;
     isActive: boolean;
+    formName: Array<string>;
     status: 'raised' | 'satisfied';
     timestamp: Date;
 }
@@ -23,12 +25,13 @@ export interface AlertTaskConfig {
     isActive: boolean;
     status: Alert['status'];
     validationId?: string;  // ID of the validation that triggers this alert
+    formName: Array<string>;
 }
 
 export interface AlertTask extends Task {
     type: TaskType.ALERT;
     config: AlertTaskConfig;
-} 
+}
 
 export interface IAlertEngine {
     raiseAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Promise<Alert>;

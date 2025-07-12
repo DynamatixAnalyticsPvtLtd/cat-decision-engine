@@ -2,12 +2,10 @@ import { MongoClient } from 'mongodb';
 import { Workflow } from '../core/types/workflow';
 import { TaskType, TaskMethod, TaskPriority, TaskRetryStrategy } from '../tasks/enums/task.enum';
 import { ValidationOnFail } from '../core/enums/validation.enum';
-import { getConfig } from '../core/config/library-config';
 
-const { mongodb } = getConfig();
-const MONGODB_URI = mongodb.uri;
-const DB_NAME = mongodb.database || 'workflow-engine';
-const COLLECTION_NAME = mongodb.collection || 'workflows_logs';
+const MONGODB_URI = process.env.MONGODB_URI;
+const DB_NAME = process.env.MONGODB_DATABASE || 'workflow-engine';
+const COLLECTION_NAME = process.env.MONGODB_COLLECTION || 'workflows_logs';
 
 async function initWorkflows() {
     const client = new MongoClient(MONGODB_URI);

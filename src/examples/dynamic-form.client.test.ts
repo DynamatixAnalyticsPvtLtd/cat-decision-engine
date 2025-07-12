@@ -1,17 +1,15 @@
 import { processLoanForm, processInsuranceForm, processMortgageForm } from './dynamic-form.client';
 import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
-import { getConfig } from '../core/config/library-config';
 
 dotenv.config();
 
 jest.setTimeout(50000);
 
-const { mongodb } = getConfig();
 
-const MONGODB_URI = mongodb.uri;
-const DB_NAME = mongodb.database || 'workflow-engine';
-const LOGS_COLLECTION = mongodb.collection || 'workflow_logs';
+const MONGODB_URI = process.env.MONGODB_URI;
+const DB_NAME = process.env.DB_NAME || 'workflow-engine';
+const LOGS_COLLECTION = process.env.MONGODB_COLLECTION || 'workflow_logs';
 
 describe('Dynamic Form Client Integration Tests', () => {
     let client: MongoClient;
