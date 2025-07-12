@@ -1,6 +1,6 @@
 import { Workflow } from '../types/workflow';
 import { WorkflowResult } from '../types/workflow-result';
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from '../logging/logger.interface';
 import { ValidationExecutor } from '../executors/validation-executor';
 import { ValidationResultItem } from '../types/validation-result';
 import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';

@@ -19,7 +19,20 @@ npm install @dynamatix/cat-decision-engine
 
 ## Quick Start
 
-1. **Decorate your method**:
+1. **Set up environment variables** (create a `.env` file):
+```bash
+# Required
+MONGODB_URI=mongodb://localhost:27017
+
+# Optional (with defaults)
+MONGODB_DATABASE=workflow-engine
+MONGODB_COLLECTION=workflows_logs
+LOG_LEVEL=info
+LOG_ENABLED=true
+LOG_COLLECTION=workflow_logs
+```
+
+2. **Decorate your method**:
 ```typescript
 import { WorkflowMethod } from '@dynamatix/cat-decision-engine';
 
@@ -31,7 +44,9 @@ class UserService {
 }
 ```
 
-2. **Configure your workflow**:
+**That's it!** The library automatically reads configuration from environment variables. No initialization required.
+
+3. **Configure your workflow**:
 ```json
 {
     "id": "user-creation-workflow",

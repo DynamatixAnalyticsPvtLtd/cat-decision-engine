@@ -1,11 +1,10 @@
-import { AlertTaskExecutor } from './alert-task.executor';
-import { AlertTask } from './alert-task.interface';
+import { AlertTaskExecutor } from './alert-task-executor';
+import { AlertTask, IAlertEngine } from './alert.interface';
 import { TaskType } from '../enums/task.enum';
 import { TaskError } from '../../core/errors/workflow-error';
-import { IAlertEngine } from '../../../features/alert/interfaces/alert.interface';
 
 // Mock the alert engine
-jest.mock('../../../features/alert/interfaces/alert.interface');
+jest.mock('../../features/alert/interfaces/alert.interface');
 
 describe('AlertTaskExecutor', () => {
     let alertTaskExecutor: AlertTaskExecutor;

@@ -6,6 +6,10 @@ import { getWorkflowStore } from '../config/workflow-store-singleton';
 
 export function WorkflowMethod() {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+        console.log('WorkflowMethod decorator called');
+        console.log('target', target);
+        console.log('propertyKey', propertyKey);
+        console.log('descriptor', descriptor);
         const originalMethod = descriptor.value;
 
         descriptor.value = async function (...args: any[]) {

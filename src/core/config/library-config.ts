@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 export interface LibraryConfig {
     mongodb: {
         uri: string;
@@ -15,36 +19,27 @@ export interface LibraryConfig {
     };
 }
 
-let config: LibraryConfig | null = null;
-
-export function initializeLibrary(configuration: LibraryConfig) {
-    if (!configuration.mongodb.uri) {
-        throw new Error('MongoDB URI is required in configuration');
+export function getConfig(): LibraryConfig {
+    const mongodbUri = process.env.MONGODB_URI;
+    if (!mongodbUri) {
+        throw new Error('MONGODB_URI environment variable is required');
     }
 
-    config = {
+    return {
         mongodb: {
-            uri: configuration.mongodb.uri,
-            database: configuration.mongodb.database || 'workflow-engine',
-            collection: configuration.mongodb.collection || 'workflows_logs',
+            uri: mongodbUri,
+            database: process.env.MONGODB_DATABASE || 'workflow-engine',
+            collection: process.env.MONGODB_COLLECTION || 'workflows_logs',
             options: {
                 useNewUrlParser: true,
-                useUnifiedTopology: true,
-                ...configuration.mongodb.options
+                useUnifiedTopology: true
             }
         },
         logging: {
-            level: 'info',
-            enabled: true,
-            collection: 'workflow_logs',
-            ...configuration.logging
+            level: (process.env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error') || 'info',
+            enabled: process.env.LOG_ENABLED !== 'false',
+            collection: process.env.LOG_COLLECTION || 'workflow_logs'
         }
     };
 }
 
-export function getConfig(): LibraryConfig {
-    if (!config) {
-        throw new Error('Library not initialized. Call initializeLibrary first.');
-    }
-    return config;
-} 

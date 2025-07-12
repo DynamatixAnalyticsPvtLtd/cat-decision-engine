@@ -1,7 +1,7 @@
 import { ValidationRule } from '../types/validation-rule';
 import { ValidationResult, ValidationResultItem } from '../types/validation-result';
 import { MongoLogger } from '../logging/mongo-logger';
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from '../logging/logger.interface';
 import { WorkflowContext } from '../types/workflow-context';
 import { ValidationOnFail } from '../enums/validation.enum';
 
@@ -72,7 +72,7 @@ export class ValidationExecutor {
 
         // Check if any validation failed with STOP
         const hasFailedValidation = results.some(result => !result.success);
-        
+
         return {
             success: !shouldStop, // Only set success to false if we need to stop
             validationResults: results,

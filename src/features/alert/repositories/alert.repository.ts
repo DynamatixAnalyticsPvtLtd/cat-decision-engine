@@ -1,5 +1,6 @@
 import { Alert, IAlertEngine } from '../../../tasks/alert/alert.interface';
-import { WorkflowAlertModel, AlertDocument } from '../models/alert.model';
+// @ts-ignore
+import { WorkflowAlertModel } from '@dynamatix/cat-shared/models';
 
 export class AlertRepository implements IAlertEngine {
     async raiseAlert(alert: Omit<Alert, 'id' | 'timestamp'>): Promise<Alert> {
@@ -51,7 +52,7 @@ export class AlertRepository implements IAlertEngine {
         return alert ? this.mapToAlert(alert) : null;
     }
 
-    private mapToAlert(document: AlertDocument): Alert {
+    private mapToAlert(document: any): Alert {
         return {
             id: document._id.toString(),
             source: document.source,

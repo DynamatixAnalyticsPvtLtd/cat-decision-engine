@@ -2,7 +2,7 @@ import { Workflow } from '../core/types/workflow';
 import { ValidationRule } from '../core/types/validation-rule';
 import { Task } from '../core/types/task';
 import { IWorkflowStore, MongoWorkflowStore } from '../storage/workflow-store';
-import { TaskType, TaskMethod } from 'tasks/enums/task.enum';
+import { TaskType, TaskMethod } from '../tasks/enums/task.enum';
 import { createDecoratedWorkflowEngine } from '../core/decorators/workflow-engine.decorator';
 import { WorkflowEngine } from '../core/workflow-engine';
 import { DefaultLogger } from '../core/logging/default-logger';
@@ -36,9 +36,9 @@ const validationRules: ValidationRule[] = [
 // Define tasks using JSONPlaceholder API
 const tasks: Task[] = [
     {
-        id: 'check-credit-history',
-        name: 'Check Credit History',
-        type: TaskType.API_CALL,
+        id: 'check-credit-alert',
+        name: 'Check Credit Alert',
+        type: TaskType.ALERT,
         order: 1,
         config: {
             url: 'https://jsonplaceholder.typicode.com/posts/1',

@@ -8,6 +8,7 @@ export class DynamicFormUseCase {
 
     @WorkflowMethod()
     async processForm(data: any) {
+        console.log('Processing form', data);
         // The decorator will:
         // 1. Get the workflow from MongoDB using the class, method name, and entityType as trigger
         // 2. Execute the workflow (validations and tasks)

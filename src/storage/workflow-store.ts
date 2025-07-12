@@ -1,5 +1,5 @@
 import { Workflow } from '../core/types';
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from '../core/logging/logger.interface';
 
 export interface IWorkflowStore {
     findWorkflowByTrigger(className: string, methodName: string, entityType?: string): Promise<Workflow | null>;

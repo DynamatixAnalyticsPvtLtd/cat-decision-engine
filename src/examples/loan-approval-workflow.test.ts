@@ -3,9 +3,9 @@ import { DefaultLogger } from '../core/logging/default-logger';
 import { ValidationExecutor } from '../core/executors/validation-executor';
 import { MongoClient } from 'mongodb';
 import { MongoLogger } from '../core/logging/mongo-logger';
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from '../core/logging/logger.interface';
 import { WorkflowEngine } from '../core/workflow-engine';
-import { getConfig } from 'core/config/library-config';
+import { getConfig } from '../core/config/library-config';
 
 describe('Loan Approval Workflow', () => {
     let logger: MongoLogger;
