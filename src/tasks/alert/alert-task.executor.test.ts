@@ -22,7 +22,7 @@ describe('AlertTaskExecutor', () => {
             raiseAlert: jest.fn()
         } as unknown as jest.Mocked<IAlertEngine>;
 
-        alertTaskExecutor = new AlertTaskExecutor(mockLogger, mockAlertEngine);
+        alertTaskExecutor = new AlertTaskExecutor(mockLogger);
         jest.clearAllMocks();
     });
 
@@ -38,7 +38,8 @@ describe('AlertTaskExecutor', () => {
                     sourceId: 'test-source-id',
                     alertMessage: 'Test alert message',
                     isActive: true,
-                    status: 'raised'
+                    status: 'raised',
+                    contextId: 'test-context-id'
                 }
             };
 
@@ -52,9 +53,9 @@ describe('AlertTaskExecutor', () => {
                 timestamp: new Date()
             };
 
-            mockAlertEngine.raiseAlert.mockResolvedValueOnce(mockAlertResult);
+            mockAlertEngine.raiseAlert.mockResolvedValueOnce(mockAlertResult as any);
 
-            const result = await alertTaskExecutor.execute(task, { data: {} });
+            const result = await alertTaskExecutor.execute(task, { data: {} } as any);
 
             expect(result).toEqual(mockAlertResult);
             expect(mockLogger.debug).toHaveBeenCalledWith(
@@ -81,14 +82,15 @@ describe('AlertTaskExecutor', () => {
                     sourceId: 'test-source-id',
                     alertMessage: 'Test alert message',
                     isActive: true,
-                    status: 'raised'
+                    status: 'raised',
+                    contextId: 'test-context-id'
                 }
             };
 
             const errorMessage = 'Failed to raise alert';
             mockAlertEngine.raiseAlert.mockRejectedValueOnce(new Error(errorMessage));
 
-            await expect(alertTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(alertTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'Alert task execution failed',
                 { taskId: 'test-alert-1', error: errorMessage }
@@ -106,11 +108,12 @@ describe('AlertTaskExecutor', () => {
                     sourceId: '',
                     alertMessage: '',
                     isActive: true,
-                    status: 'raised'
+                    status: 'raised',
+                    contextId: 'test-context-id'
                 }
             };
 
-            await expect(alertTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(alertTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'Alert task execution failed',
                 { taskId: 'test-alert-1', error: 'Invalid alert configuration' }
@@ -129,7 +132,8 @@ describe('AlertTaskExecutor', () => {
                     alertMessage: 'Test alert message',
                     isActive: true,
                     status: 'raised',
-                    category: 'test-category'
+                    category: 'test-category',
+                    contextId: 'test-context-id'
                 }
             };
 
@@ -144,9 +148,9 @@ describe('AlertTaskExecutor', () => {
                 timestamp: new Date()
             };
 
-            mockAlertEngine.raiseAlert.mockResolvedValueOnce(mockAlertResult);
+            mockAlertEngine.raiseAlert.mockResolvedValueOnce(mockAlertResult as any);
 
-            const result = await alertTaskExecutor.execute(task, { data: {} });
+            const result = await alertTaskExecutor.execute(task, { data: {} } as any);
 
             expect(result).toEqual(mockAlertResult);
             expect(mockAlertEngine.raiseAlert).toHaveBeenCalledWith({

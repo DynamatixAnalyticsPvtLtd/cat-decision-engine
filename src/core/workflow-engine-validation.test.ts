@@ -56,7 +56,8 @@ describe('WorkflowEngine Validation', () => {
                 validationResults: [{
                     rule: validationRule,
                     success: true
-                }]
+                }],
+                shouldStop: false
             });
 
             const result = await workflowEngine.execute(workflow, data);
@@ -106,7 +107,8 @@ describe('WorkflowEngine Validation', () => {
                 validationResults: validationRules.map(rule => ({
                     rule,
                     success: true
-                }))
+                })),
+                shouldStop: false
             });
 
             const result = await workflowEngine.execute(workflow, data);
@@ -138,7 +140,8 @@ describe('WorkflowEngine Validation', () => {
                     rule: validationRule,
                     success: false,
                     message: 'Validation failed: age >= 18'
-                }]
+                }],
+                shouldStop: true
             });
 
             const workflow: Workflow = {
@@ -183,7 +186,8 @@ describe('WorkflowEngine Validation', () => {
                     rule: validationRule,
                     success: false,
                     message: 'Validation failed: age >= 18'
-                }]
+                }],
+                shouldStop: true
             });
 
             const workflow: Workflow = {
@@ -226,7 +230,8 @@ describe('WorkflowEngine Validation', () => {
 
             validationExecutor.execute.mockResolvedValueOnce({
                 success: true,
-                validationResults: []
+                validationResults: [],
+                shouldStop: false
             });
 
             const result = await workflowEngine.execute(workflow, data);

@@ -1,13 +1,12 @@
 import { TaskFactory } from '../factory/task.factory';
 import { TaskType } from '../enums/task.enum';
-import { AlertTask } from './alert-task.interface';
 import { TaskError } from '../../core/errors/workflow-error';
-import { AlertTaskExecutor } from './alert-task.executor';
+import { AlertTaskExecutor } from './alert-task-executor';
 import { TaskValidationService } from '../../core/services/task-validation.service';
 import { DefaultLogger } from '../../core/logging/default-logger';
-import { IAlertEngine } from '../../../features/alert/interfaces/alert.interface';
+import { AlertTask, IAlertEngine } from './alert.interface';
 
-jest.mock('./alert-task.executor');
+jest.mock('./alert-task-executor');
 jest.mock('../../core/services/task-validation.service');
 jest.mock('../../../features/alert/interfaces/alert.interface');
 
@@ -65,7 +64,8 @@ describe('AlertTaskFactory', () => {
                 sourceId: 'test-source-id',
                 alertMessage: 'Test alert message',
                 isActive: true,
-                status: 'raised'
+                status: 'raised',
+                contextId: 'test-context-id'
             }
         };
 
@@ -82,7 +82,7 @@ describe('AlertTaskFactory', () => {
             };
 
             mockValidationService.validateTask.mockImplementation(() => { });
-            mockAlertTaskExecutor.execute.mockResolvedValueOnce(mockOutput);
+            mockAlertTaskExecutor.execute.mockResolvedValueOnce(mockOutput as any);
 
             const result = await taskFactory.executeTask(mockTask, mockContext);
 

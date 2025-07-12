@@ -1,7 +1,7 @@
 import { processLoanForm, processInsuranceForm, processMortgageForm } from './dynamic-form.client';
 import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
-import { getConfig } from 'core/config/library-config';
+import { getConfig } from '../core/config/library-config';
 
 dotenv.config();
 

@@ -3,7 +3,7 @@ import { WorkflowMethod } from '../core/decorators/workflow-method.decorator';
 import { IWorkflowStore, MongoWorkflowStore } from '../storage/workflow-store';
 
 import { MongoLogger } from '../core/logging/mongo-logger';
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from '../core/logging/logger.interface';
 
 // Example of how a client would use the library
 export class LoanApprovalUseCase {

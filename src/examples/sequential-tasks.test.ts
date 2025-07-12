@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 import { SequentialTasksUseCase } from './sequential-tasks.usecase';
-import { getConfig } from 'core/config/library-config';
+import { getConfig } from '../core/config/library-config';
 
 jest.setTimeout(50000);
 

@@ -75,7 +75,7 @@ describe('TaskFactory', () => {
             };
 
             mockValidationService.validateTask.mockImplementation(() => { });
-            mockApiTaskExecutor.execute.mockResolvedValueOnce(mockOutput);
+            mockApiTaskExecutor.execute.mockResolvedValueOnce(mockOutput as any);
 
             const result = await taskFactory.executeTask(mockTask, mockContext);
 

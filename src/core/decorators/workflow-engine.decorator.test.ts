@@ -7,7 +7,7 @@ import { ValidationRule } from '../types/validation-rule';
 import { IWorkflowEngine } from '../interfaces/workflow-engine.interface';
 import { ValidationOnFail } from '../enums/validation.enum';
 import { WorkflowEngine } from '../workflow-engine';
-import { ILogger } from 'core/logging/logger.interface';
+import { ILogger } from '../logging/logger.interface';
 
 jest.mock('../executors/validation-executor');
 
@@ -48,7 +48,7 @@ describe('WorkflowEngine Decorators', () => {
         it('should log workflow execution start and success', async () => {
             const successResult: WorkflowResult = {
                 success: true,
-                context: { data },
+                context: { data, workflowId: 'test-workflow', workflowName: 'Test Workflow', executionId: 'test-execution-id' },
                 validationResults: [],
                 taskResults: [],
                 executionId: 'test-execution-id'
@@ -76,7 +76,7 @@ describe('WorkflowEngine Decorators', () => {
         it('should execute workflow when validations pass', async () => {
             const successResult: WorkflowResult = {
                 success: true,
-                context: { data },
+                context: { data, workflowId: 'test-workflow', workflowName: 'Test Workflow', executionId: 'test-execution-id' },
                 validationResults: [],
                 taskResults: [],
                 executionId: 'test-execution-id'
@@ -110,7 +110,7 @@ describe('WorkflowEngine Decorators', () => {
                     success: false,
                     message: 'Age must be at least 18'
                 }]
-            });
+            } as any);
 
             const decoratedEngine = new ValidationWorkflowEngineDecorator(mockWorkflowEngine, validationExecutor);
             const result = await decoratedEngine.execute(workflow, data);
@@ -126,7 +126,7 @@ describe('WorkflowEngine Decorators', () => {
         it('should skip validation when no validations are present', async () => {
             const successResult: WorkflowResult = {
                 success: true,
-                context: { data },
+                context: { data, workflowId: 'test-workflow', workflowName: 'Test Workflow', executionId: 'test-execution-id' },
                 validationResults: [],
                 taskResults: [],
                 executionId: 'test-execution-id'
@@ -155,7 +155,7 @@ describe('WorkflowEngine Decorators', () => {
             expect(result.error).toBe('Test error');
             expect(result.taskResults).toHaveLength(0);
             expect(result.validationResults).toHaveLength(0);
-            expect(result.context).toEqual({ data });
+            expect(result.context).toEqual({ data, workflowId: 'test-workflow', workflowName: 'Test Workflow', executionId: 'test-execution-id' });
             expect(result.executionId).toBeDefined();
         });
 
@@ -169,7 +169,7 @@ describe('WorkflowEngine Decorators', () => {
             expect(result.error).toBe('Unknown error');
             expect(result.taskResults).toHaveLength(0);
             expect(result.validationResults).toHaveLength(0);
-            expect(result.context).toEqual({ data });
+            expect(result.context).toEqual({ data, workflowId: 'test-workflow', workflowName: 'Test Workflow', executionId: 'test-execution-id' });
             expect(result.executionId).toBeDefined();
         });
     });
@@ -178,7 +178,7 @@ describe('WorkflowEngine Decorators', () => {
         it('should create a workflow engine with all decorators', async () => {
             const successResult: WorkflowResult = {
                 success: true,
-                context: { data },
+                context: { data, workflowId: 'test-workflow', workflowName: 'Test Workflow', executionId: 'test-execution-id' },
                 validationResults: [],
                 taskResults: [],
                 executionId: 'test-execution-id'
@@ -204,7 +204,7 @@ describe('WorkflowEngine Decorators', () => {
             expect(result.error).toBe('Test error');
             expect(result.taskResults).toHaveLength(0);
             expect(result.validationResults).toHaveLength(0);
-            expect(result.context).toEqual({ data });
+            expect(result.context).toEqual({ data, workflowId: 'test-workflow', workflowName: 'Test Workflow', executionId: 'test-execution-id' });
             expect(result.executionId).toBeDefined();
         });
 
@@ -227,7 +227,7 @@ describe('WorkflowEngine Decorators', () => {
                     success: false,
                     message: 'Age must be at least 18'
                 }]
-            });
+            } as any);
 
             const decoratedEngine = createDecoratedWorkflowEngine(mockWorkflowEngine, logger, validationExecutor);
             const result = await decoratedEngine.execute(workflow, data);

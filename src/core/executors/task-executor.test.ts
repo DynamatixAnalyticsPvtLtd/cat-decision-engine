@@ -2,8 +2,7 @@ import { TaskExecutor } from './task-executor';
 import { Task, WorkflowContext } from '../types';
 import { TaskError } from '../errors/workflow-error';
 import { TaskFactory } from '../../tasks/factory/task.factory';
-import { TaskMethod } from 'tasks/enums/task.enum';
-import { TaskType } from 'tasks/enums/task.enum';
+import { TaskMethod, TaskType } from '../../tasks/enums/task.enum';
 
 jest.mock('../../tasks/factory/task.factory');
 
@@ -45,7 +44,10 @@ describe('TaskExecutor', () => {
         };
 
         const mockContext: WorkflowContext = {
-            data: { test: 'data' }
+            data: { test: 'data' },
+            workflowId: '1',
+            workflowName: 'Test Workflow',
+            executionId: '1'
         };
 
         it('should execute task successfully', async () => {
@@ -145,7 +147,10 @@ describe('TaskExecutor', () => {
         ];
 
         const mockContext: WorkflowContext = {
-            data: { test: 'data' }
+            data: { test: 'data' },
+            workflowId: '1',
+            workflowName: 'Test Workflow',
+            executionId: '1'
         };
 
         it('should execute all tasks successfully', async () => {

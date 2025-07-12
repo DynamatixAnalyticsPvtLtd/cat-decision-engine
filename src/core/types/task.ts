@@ -1,4 +1,4 @@
-import { TaskType, TaskMethod, TaskPriority, TaskRetryStrategy } from 'tasks/enums/task.enum';
+import { TaskType, TaskMethod, TaskPriority, TaskRetryStrategy } from '../../tasks/enums/task.enum';
 
 export interface BaseTaskConfig {
     timeout?: number;

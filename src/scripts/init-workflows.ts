@@ -1,8 +1,8 @@
 import { MongoClient } from 'mongodb';
 import { Workflow } from '../core/types/workflow';
-import { TaskType, TaskMethod, TaskPriority, TaskRetryStrategy } from 'tasks/enums/task.enum';
-import { ValidationOnFail } from 'core/enums/validation.enum';
-import { getConfig } from 'core/config/library-config';
+import { TaskType, TaskMethod, TaskPriority, TaskRetryStrategy } from '../tasks/enums/task.enum';
+import { ValidationOnFail } from '../core/enums/validation.enum';
+import { getConfig } from '../core/config/library-config';
 
 const { mongodb } = getConfig();
 const MONGODB_URI = mongodb.uri;

@@ -62,7 +62,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockResolvedValueOnce(mockResponse);
 
-            const result = await apiTaskExecutor.execute(task, { data: {} });
+            const result = await apiTaskExecutor.execute(task, { data: {} } as any);
 
             expect(result).toEqual({
                 statusCode: 200,
@@ -90,7 +90,7 @@ describe('ApiTaskExecutor', () => {
             const errorMessage = 'Network Error';
             (mockedAxios as any).mockRejectedValueOnce(new Error(errorMessage));
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'API task execution failed',
                 { taskId: '1', error: errorMessage }
@@ -122,7 +122,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockRejectedValueOnce(error);
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'API task execution failed',
                 { taskId: '1', error: 'Unknown error' }
@@ -154,7 +154,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockRejectedValueOnce(error);
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'API task execution failed',
                 { taskId: '1', error: 'Unknown error' }
@@ -185,7 +185,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockResolvedValueOnce(mockResponse);
 
-            await apiTaskExecutor.execute(task, { data: {} });
+            await apiTaskExecutor.execute(task, { data: {} } as any);
 
             expect(mockedAxios).toHaveBeenCalledWith({
                 url: 'https://api.test.com',
@@ -222,7 +222,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockRejectedValueOnce(error);
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'API task execution failed',
                 { taskId: '1', error: 'Unknown error' }
@@ -249,7 +249,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockResolvedValueOnce(mockResponse);
 
-            const result = await apiTaskExecutor.execute(task, { data: {} });
+            const result = await apiTaskExecutor.execute(task, { data: {} } as any);
 
             expect(result).toEqual({
                 statusCode: 200,
@@ -278,7 +278,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockResolvedValueOnce(mockResponse);
 
-            const result = await apiTaskExecutor.execute(task, { data: {} });
+            const result = await apiTaskExecutor.execute(task, { data: {} } as any);
 
             expect(result).toEqual({
                 statusCode: 200,
@@ -323,7 +323,7 @@ describe('ApiTaskExecutor', () => {
                     data: { message: 'success' }
                 });
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
         });
 
         it('should handle concurrent requests with different configurations', async () => {
@@ -369,7 +369,7 @@ describe('ApiTaskExecutor', () => {
                 .mockResolvedValueOnce(mockResponses[1]);
 
             await expect(Promise.all(
-                tasks.map(task => apiTaskExecutor.execute(task, { data: {} }))
+                tasks.map(task => apiTaskExecutor.execute(task, { data: {} } as any))
             )).rejects.toThrow(TaskError);
         });
 
@@ -385,7 +385,7 @@ describe('ApiTaskExecutor', () => {
                 }
             };
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
         });
 
         it('should handle missing method in task config', async () => {
@@ -400,7 +400,7 @@ describe('ApiTaskExecutor', () => {
                 }
             };
 
-            const result = await apiTaskExecutor.execute(task, { data: {} });
+            const result = await apiTaskExecutor.execute(task, { data: {} } as any);
 
             expect(result).toEqual({
                 statusCode: 200,
@@ -421,7 +421,7 @@ describe('ApiTaskExecutor', () => {
                 }
             };
 
-            const result = await apiTaskExecutor.execute(task, { data: {} });
+            const result = await apiTaskExecutor.execute(task, { data: {} } as any);
 
             expect(result).toEqual({
                 statusCode: 200,
@@ -449,7 +449,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockRejectedValueOnce(error);
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'API task execution failed',
                 { taskId: '1', error: 'Unknown error' }
@@ -475,7 +475,7 @@ describe('ApiTaskExecutor', () => {
 
             (mockedAxios as any).mockRejectedValueOnce(error);
 
-            await expect(apiTaskExecutor.execute(task, { data: {} })).rejects.toThrow(TaskError);
+            await expect(apiTaskExecutor.execute(task, { data: {} } as any)).rejects.toThrow(TaskError);
             expect(mockLogger.error).toHaveBeenCalledWith(
                 'API task execution failed',
                 { taskId: '1', error: 'Unknown error' }

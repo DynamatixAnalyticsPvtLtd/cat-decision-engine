@@ -1,5 +1,5 @@
 import { TaskType } from '../enums/task.enum';
-import { AlertTask } from './alert-task.interface';
+import { AlertTask } from './alert.interface';
 
 describe('AlertTask Interface', () => {
     it('should have required properties', () => {
@@ -13,7 +13,8 @@ describe('AlertTask Interface', () => {
                 sourceId: 'test-source-id',
                 alertMessage: 'Test alert message',
                 isActive: true,
-                status: 'raised'
+                status: 'raised',
+                contextId: 'test-context-id'
             }
         };
 
@@ -35,7 +36,8 @@ describe('AlertTask Interface', () => {
                 sourceId: 'test-source-id',
                 alertMessage: 'Test alert message',
                 isActive: true,
-                status: 'raised'
+                status: 'raised',
+                contextId: 'test-context-id'
             }
         };
 
@@ -53,7 +55,8 @@ describe('AlertTask Interface', () => {
                 sourceId: 'test-source-id',
                 alertMessage: 'Test alert message',
                 isActive: true,
-                status: 'raised'
+                status: 'raised',
+                contextId: 'test-context-id'
             }
         };
 
@@ -76,7 +79,8 @@ describe('AlertTask Interface', () => {
                 alertMessage: 'Test alert message',
                 isActive: true,
                 status: 'raised',
-                category: 'test-category'
+                category: 'test-category',
+                contextId: 'test-context-id'
             }
         };
 
