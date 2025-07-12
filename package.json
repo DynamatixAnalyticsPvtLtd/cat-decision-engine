@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/dynamatix/cat-decision-engine#readme",
   "dependencies": {
-    "@dynamatix/cat-shared": "^0.0.110",
+    "@dynamatix/cat-shared": "^0.0.111",
     "@types/dotenv": "^6.1.1",
     "@types/uuid": "^10.0.0",
     "axios": "^1.6.7",
