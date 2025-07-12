@@ -1,6 +1,6 @@
 {
   "name": "@dynamatix/cat-decision-engine",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "A powerful Node.js library for building and executing configurable workflows with validation and task execution capabilities",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
